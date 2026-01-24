@@ -1,0 +1,64 @@
+/* Login Page Styling */
+.login-container {
+  max-width: 400px;
+  margin: 50px auto;
+  padding: 30px 25px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  font-family: "Segoe UI", sans-serif;
+}
+
+.login-container h2 {
+  text-align: center;
+  color: #3a2b1b;
+  margin-bottom: 20px;
+}
+
+.login-container input {
+  width: 100%;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  border: 1px solid #d4cbbd;
+  border-radius: 8px;
+  font-size: 15px;
+  outline: none;
+  transition: 0.2s;
+}
+
+.login-container input:focus {
+  border-color: #7b5a2b;
+  box-shadow: 0 0 0 3px rgba(123, 90, 43, 0.15);
+}
+
+.login-container button {
+  width: 100%;
+  padding: 12px;
+  background: #7b5a2b;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.login-container button:hover {
+  background: #6c4f24;
+}
+
+.login-container p {
+  text-align: center;
+  margin-top: 15px;
+  color: #5b4a35;
+}
+
+.login-container a {
+  color: #7b5a2b;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.login-container a:hover {
+  text-decoration: underline;
+}

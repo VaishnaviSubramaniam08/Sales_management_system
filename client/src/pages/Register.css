@@ -1,0 +1,72 @@
+/* Register Page Styling */
+.register-container {
+  max-width: 420px;
+  margin: 70px auto;
+  padding: 30px 25px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  font-family: "Segoe UI", sans-serif;
+}
+
+.register-container h2 {
+  text-align: center;
+  color: #3a2b1b;
+  margin-bottom: 20px;
+}
+
+.register-container input,
+.register-container select {
+  width: 100%;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  border: 1px solid #d4cbbd;
+  border-radius: 8px;
+  font-size: 15px;
+  outline: none;
+  transition: 0.2s;
+}
+
+.register-container input:focus,
+.register-container select:focus {
+  border-color: #7b5a2b;
+  box-shadow: 0 0 0 3px rgba(123, 90, 43, 0.15);
+}
+
+.register-container button {
+  width: 100%;
+  padding: 12px;
+  background: #7b5a2b;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.register-container button:hover {
+  background: #6c4f24;
+}
+
+.register-container p {
+  text-align: center;
+  margin-top: 15px;
+  color: #5b4a35;
+}
+
+.register-container a {
+  color: #7b5a2b;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.register-container a:hover {
+  text-decoration: underline;
+}
+
+.register-error {
+  color: #ff3b3b;
+  text-align: center;
+  margin-bottom: 12px;
+}
