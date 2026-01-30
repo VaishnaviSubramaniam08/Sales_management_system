@@ -12,6 +12,11 @@ router.post("/register", async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
 
+    // if (role === "admin") {
+    //   return res
+    //     .status(403)
+    //     .json({ message: "Admin creation not allowed" });
+    // }
     // Check user exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {

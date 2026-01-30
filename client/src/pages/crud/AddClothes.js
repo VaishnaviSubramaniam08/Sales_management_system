@@ -21,6 +21,7 @@ export default function AddClothes() {
     color: "",
     price: "",
     quantity: "",
+    image: null,
   });
 
   const [error, setError] = useState("");
@@ -44,8 +45,21 @@ export default function AddClothes() {
       return;
     }
 
+    const formData = new FormData();
+    formData.append("name", form.name);
+    formData.append("category", form.category);
+    formData.append("size", form.size);
+    formData.append("color", form.color);
+    formData.append("price", form.price);
+    formData.append("quantity", form.quantity);
+    if (form.image) {
+      formData.append("image", form.image);
+    }
+
     try {
-      await api.post("/clothes/add", form);
+      await api.post("/clothes/add", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
 
       setSuccess("Clothes added successfully!");
 
@@ -56,7 +70,9 @@ export default function AddClothes() {
         size: "",
         color: "",
         price: "",
+        price: "",
         quantity: "",
+        image: null,
       });
 
       // Navigate back to dashboard
@@ -136,6 +152,20 @@ export default function AddClothes() {
           style={styles.input}
         />
       ))}
+
+      <div style={{ marginBottom: "14px" }}>
+        <label style={{ display: "block", marginBottom: "5px", color: "#666" }}>
+          Upload Image
+        </label>
+        <input
+          type="file"
+          accept="image/*"
+          onChange={(e) =>
+            setForm({ ...form, image: e.target.files[0] })
+          }
+          style={styles.input}
+        />
+      </div>
 
       <button onClick={handleSubmit} style={styles.button}>
         Add

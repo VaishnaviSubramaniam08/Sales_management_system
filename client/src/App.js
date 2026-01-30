@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Home from "./pages/frontpage/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -6,23 +6,21 @@ import Dashboard from "./pages/Dashboard";
 import AddClothes from "./pages/crud/AddClothes";
 import EditClothes from "./pages/crud/EditClothes";
 import Sales from "./pages/Sales";
-import ClothesList from "./pages/crud/ClothesList";
 import Collections from "./pages/frontpage/Collections";
 import Brands from "./pages/frontpage/Brands";
 import About from "./pages/frontpage/About";
-
-// Private Route Component
-const PrivateRoute = ({ children }) => {
-  const isLoggedIn = !!localStorage.getItem("token");
-  return isLoggedIn ? children : <Navigate to="/login" />;
-};
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import Transactions from "./pages/admin/Transactions";
+import AddStaff from "./pages/admin/AddStaff";
+import Reports from "./pages/Reports";
+import PrivateRoute from "./PrivateRoute";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
 
-        {/* Public Routes */}
+        {/* Public */}
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
@@ -30,12 +28,29 @@ function App() {
         <Route path="/brands" element={<Brands />} />
         <Route path="/about" element={<About />} />
 
-        {/* Protected Routes */}
+        {/* Admin */}
         <Route
-          path="/dashboard"
+          path="/admin"
           element={
-            <PrivateRoute>
-              <Dashboard />
+            <PrivateRoute adminOnly={true}>
+              <AdminDashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/add-staff"
+          element={
+            <PrivateRoute adminOnly={true}>
+              <AddStaff />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/transactions"
+          element={
+            <PrivateRoute adminOnly={true}>
+              <Transactions />
             </PrivateRoute>
           }
         />
@@ -43,8 +58,36 @@ function App() {
         <Route
           path="/add"
           element={
-            <PrivateRoute>
+            <PrivateRoute adminOnly={true}>
               <AddClothes />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/edit/:id"
+          element={
+            <PrivateRoute adminOnly={true}>
+              <EditClothes />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/reports"
+          element={
+            <PrivateRoute adminOnly={true}>
+              <Reports />
+            </PrivateRoute>
+          }
+        />
+
+        {/* Staff */}
+        <Route
+          path="/dashboard"
+          element={
+            <PrivateRoute>
+              <Dashboard />
             </PrivateRoute>
           }
         />
@@ -57,32 +100,6 @@ function App() {
             </PrivateRoute>
           }
         />
-         <Route
-  path="/sales"
-  element={
-    <PrivateRoute>
-      <Sales />
-    </PrivateRoute>
-  }
-/>
-
-<Route
-  path="/edit/:id"
-  element={
-    <PrivateRoute>
-      <EditClothes />
-    </PrivateRoute>
-  }
-/>
-<Route
-  path="/sales"
-  element={
-    <PrivateRoute>
-      <Sales />
-    </PrivateRoute>
-  }
-/>
-
 
       </Routes>
     </BrowserRouter>

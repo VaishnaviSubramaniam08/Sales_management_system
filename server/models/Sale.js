@@ -9,6 +9,13 @@ const saleSchema = new mongoose.Schema({
     },
   ],
   totalAmount: Number,
+  soldBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  paymentId: { type: mongoose.Schema.Types.ObjectId, ref: "Payment" },
+  paymentStatus: {
+    type: String,
+    enum: ["Paid", "Pending", "Failed"],
+    default: "Pending",
+  },
   date: { type: Date, default: Date.now },
 });
 

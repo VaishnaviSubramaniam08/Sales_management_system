@@ -1,9 +1,9 @@
 import { useState } from "react";
-import api from "../api/axios";
-import { useNavigate, Link } from "react-router-dom";
-import "./Register.css";
+import api from "../../api/axios";
+import { useNavigate } from "react-router-dom";
 
-export default function Register() {
+export default function RegisterStaff() {
+  const navigate = useNavigate();
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -11,7 +11,6 @@ export default function Register() {
   });
 
   const [error, setError] = useState("");
-  const navigate = useNavigate();
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -32,18 +31,18 @@ export default function Register() {
         role: "staff", // 🔒 force staff role
       });
 
-      alert("✅ Staff registration successful");
-      navigate("/");
+      alert("Staff account created successfully");
+      navigate("/admin");
     } catch (err) {
       setError(err.response?.data?.message || "Registration failed");
     }
   };
 
   return (
-    <div className="register-container">
-      <h2>Staff Registration</h2>
+    <div style={{ padding: "30px", maxWidth: "450px", margin: "auto" }}>
+      <h2>Add Staff</h2>
 
-      {error && <p className="register-error">{error}</p>}
+      {error && <p style={{ color: "red" }}>{error}</p>}
 
       <form onSubmit={handleRegister}>
         <input
@@ -51,6 +50,7 @@ export default function Register() {
           placeholder="Full Name"
           value={form.name}
           onChange={handleChange}
+          style={{ width: "100%", padding: "10px", margin: "10px 0" }}
         />
 
         <input
@@ -59,6 +59,7 @@ export default function Register() {
           placeholder="Email Address"
           value={form.email}
           onChange={handleChange}
+          style={{ width: "100%", padding: "10px", margin: "10px 0" }}
         />
 
         <input
@@ -67,14 +68,13 @@ export default function Register() {
           placeholder="Password"
           value={form.password}
           onChange={handleChange}
+          style={{ width: "100%", padding: "10px", margin: "10px 0" }}
         />
 
-        <button type="submit">Register</button>
+        <button type="submit" style={{ padding: "10px 20px" }}>
+          Create Staff
+        </button>
       </form>
-
-      <p>
-        Already have an account? <Link to="/">Login</Link>
-      </p>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../api/axios";
+import PaymentModal from "./PaymentModal";
 
 export default function Sales() {
   const [clothes, setClothes] = useState([]);
@@ -49,6 +50,9 @@ export default function Sales() {
     }
   };
 
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [currentSale, setCurrentSale] = useState(null);
+
   const makeSale = async () => {
     if (cart.length === 0) {
       setError("Cart is empty");
@@ -56,14 +60,20 @@ export default function Sales() {
     }
 
     try {
-      await api.post("/sales/add", { items: cart });
-
-      setSuccess("Sale completed successfully!");
-      setCart([]);
-      fetchClothes();
+      const res = await api.post("/sales/add", { items: cart });
+      setCurrentSale(res.data.sale);
+      setShowPaymentModal(true);
     } catch (err) {
       setError(err.response?.data?.message || "Sale failed");
     }
+  };
+
+  const handlePaymentSuccess = (payment) => {
+    setShowPaymentModal(false);
+    setSuccess("Sale & Payment completed successfully!");
+    setCart([]);
+    setCurrentSale(null);
+    fetchClothes();
   };
 
   // ====== Inline Styles ======
@@ -163,6 +173,13 @@ export default function Sales() {
           </button>
         </div>
       )}
+      {showPaymentModal && currentSale && (
+        <PaymentModal
+          sale={currentSale}
+          onClose={() => setShowPaymentModal(false)}
+          onPaymentSuccess={handlePaymentSuccess}
+        />
+      )}
     </div>
   );
 }
@@ -171,16 +188,48 @@ function AddToCartForm({ clothes, addToCart, styles }) {
   const [clothId, setClothId] = useState("");
   const [qty, setQty] = useState(1);
 
+  const selectedCloth = clothes.find((c) => c._id === clothId);
+
   return (
     <div style={styles.row}>
-      <select value={clothId} onChange={(e) => setClothId(e.target.value)} style={styles.select}>
-        <option value="">Select Cloth</option>
-        {clothes.map((c) => (
-          <option key={c._id} value={c._id}>
-            {c.name} (Stock: {c.quantity})
-          </option>
-        ))}
-      </select>
+      <div style={{ width: "60%" }}>
+        <select
+          value={clothId}
+          onChange={(e) => setClothId(e.target.value)}
+          style={{ ...styles.select, width: "100%" }}
+        >
+          <option value="">Select Cloth</option>
+          {clothes.map((c) => (
+            <option key={c._id} value={c._id}>
+              {c.name} (Stock: {c.quantity})
+            </option>
+          ))}
+        </select>
+        {selectedCloth && selectedCloth.image && (
+          <div style={{
+            marginTop: "10px",
+            width: "100%",
+            height: "150px",
+            borderRadius: "8px",
+            overflow: "hidden",
+            backgroundColor: "#f9f9f9",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            border: "1px solid #d4cbbd"
+          }}>
+            <img
+              src={`http://localhost:5000${selectedCloth.image}`}
+              alt={selectedCloth.name}
+              style={{
+                maxWidth: "100%",
+                maxHeight: "100%",
+                objectFit: "contain",
+              }}
+            />
+          </div>
+        )}
+      </div>
 
       <input
         type="number"
@@ -190,7 +239,7 @@ function AddToCartForm({ clothes, addToCart, styles }) {
       />
 
       <button
-        style={{ ...styles.button, width: "30%" }}
+        style={{ ...styles.button, width: "30%", height: "fit-content" }}
         onClick={() => addToCart(clothId, qty)}
       >
         Add

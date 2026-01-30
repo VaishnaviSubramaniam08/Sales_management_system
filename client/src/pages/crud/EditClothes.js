@@ -21,14 +21,21 @@ export default function EditClothes() {
   }, []);
 
   const fetchCloth = async () => {
-    const res = await api.get(`/clothes`);
-    const cloth = res.data.find((c) => c._id === id);
-    setForm(cloth);
+    try {
+      const res = await api.get(`/clothes/${id}`);
+      setForm(res.data);
+    } catch {
+      alert("Failed to load");
+    }
   };
 
   const handleUpdate = async () => {
-    await api.put(`/clothes/${id}`, form);
-    navigate("/clothes");
+    try {
+      await api.put(`/clothes/${id}`, form);
+      navigate("/dashboard");
+    } catch {
+      alert("Update failed");
+    }
   };
 
   return (
