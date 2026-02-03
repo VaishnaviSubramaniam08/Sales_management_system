@@ -17,6 +17,65 @@ export default function Sales() {
     setClothes(res.data);
   };
 
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [customer, setCustomer] = useState(null);
+  const [isFestive, setIsFestive] = useState(false);
+  const [loyalty, setLoyalty] = useState(null); // { discountPercent, totalSpent, visitCount, ... }
+  const [newCustomerName, setNewCustomerName] = useState("");
+  const [showCreateCustomer, setShowCreateCustomer] = useState(false);
+
+  const checkLoyalty = async () => {
+    try {
+      const res = await api.get(`/customers/search?query=${customerPhone}`);
+      if (res.data.length > 0) {
+        const selected = res.data[0];
+        setCustomer(selected);
+        // Fetch loyalty eligibility details
+        try {
+          const loy = await api.get(`/customers/loyalty/${selected._id}`);
+          setLoyalty(loy.data);
+          setSuccess(`Customer Found: ${selected.name}. (Spent: ₹${loy.data.totalSpent}, Visits: ${loy.data.visitCount}, Eligible: ${loy.data.discountPercent}% )`);
+        } catch (e) {
+          setLoyalty(null);
+          setSuccess(`Customer Found: ${selected.name}. (Spent: ₹${selected.totalSpent})`);
+        }
+      } else {
+        setError("");
+        setSuccess("");
+        setCustomer(null);
+        setLoyalty(null);
+        setShowCreateCustomer(true);
+      }
+    } catch (err) {
+      setError("Error checking loyalty");
+    }
+  };
+
+  const createCustomer = async () => {
+    try {
+      if (!newCustomerName.trim() || !customerPhone.trim()) {
+        setError("Enter customer name and phone");
+        return;
+      }
+      const res = await api.post('/customers/add', { name: newCustomerName.trim(), phone: customerPhone.trim() });
+      const created = res.data;
+      setCustomer(created);
+      setShowCreateCustomer(false);
+      setNewCustomerName("");
+      // Fetch loyalty baseline
+      try {
+        const loy = await api.get(`/customers/loyalty/${created._id}`);
+        setLoyalty(loy.data);
+      } catch {
+        setLoyalty(null);
+      }
+      setSuccess(`Customer Created: ${created.name}`);
+      setError("");
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to create customer');
+    }
+  };
+
   const addToCart = (clothId, qty) => {
     setError("");
     setSuccess("");
@@ -37,6 +96,18 @@ export default function Sales() {
       return;
     }
 
+    // Old Stock Discount (Example: > 6 months)
+    let finalPrice = cloth.price;
+    let oldStockMsg = "";
+    if (cloth.createdAt) {
+      const diffTime = Math.abs(Date.now() - new Date(cloth.createdAt));
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      if (diffDays > 180) { // 6 months
+        finalPrice = Math.floor(cloth.price * 0.8); // 20% off
+        oldStockMsg = " (Old Stock 20% Off)";
+      }
+    }
+
     // Check if already in cart
     const exist = cart.find((c) => c.clothId === clothId);
     if (exist) {
@@ -46,8 +117,30 @@ export default function Sales() {
         )
       );
     } else {
-      setCart([...cart, { clothId, quantity: qty, name: cloth.name, price: cloth.price }]);
+      setCart([...cart, {
+        clothId,
+        quantity: qty,
+        name: cloth.name + oldStockMsg,
+        price: finalPrice
+      }]);
     }
+  };
+
+
+
+  const handleBarcodeScan = async (code) => {
+    try {
+      const res = await api.get(`/clothes/barcode/${code}`);
+      const cloth = res.data;
+      if (cloth) {
+        addToCart(cloth._id, 1);
+        setSuccess(`Added ${cloth.name} to cart`);
+        return true; // Return success to clear input
+      }
+    } catch (err) {
+      setError("Product not found by barcode");
+    }
+    return false;
   };
 
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -59,8 +152,29 @@ export default function Sales() {
       return;
     }
 
+    const subtotal = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
+    let discountDetails = { type: "None", amount: 0 };
+
+    // Priority: Festive 10% toggle overrides loyalty
+    if (isFestive) {
+      const amount = Math.floor(subtotal * 0.10);
+      discountDetails = { type: "festive_10", amount };
+    } else if (loyalty && loyalty.discountPercent > 0) {
+      const pct = Number(loyalty.discountPercent) || 0;
+      const amount = Math.floor(subtotal * (pct / 100));
+      discountDetails = { type: `loyalty_${pct}`, amount };
+    }
+
+    // Note: Backend expects us to subtract this? Or does it recalculated? 
+    // My backend logic just subtracts discountDetails.amount from total if present.
+    // So I need to pass it.
+
     try {
-      const res = await api.post("/sales/add", { items: cart });
+      const res = await api.post("/sales/add", {
+        items: cart,
+        customerId: customer ? customer._id : null,
+        discountDetails
+      });
       setCurrentSale(res.data.sale);
       setShowPaymentModal(true);
     } catch (err) {
@@ -73,19 +187,22 @@ export default function Sales() {
     setSuccess("Sale & Payment completed successfully!");
     setCart([]);
     setCurrentSale(null);
+    setCustomer(null);
+    setCustomerPhone("");
     fetchClothes();
   };
 
   // ====== Inline Styles ======
   const styles = {
     container: {
-      maxWidth: "700px",
-      margin: "50px auto",
+      maxWidth: "800px",
+      margin: "0 auto",
       padding: "30px 25px",
       background: "#fff",
-      borderRadius: "12px",
-      boxShadow: "0 10px 25px rgba(0, 0, 0, 0.08)",
+      borderRadius: "16px",
+      boxShadow: "0 4px 20px rgba(0,0,0,0.05)",
       fontFamily: "Segoe UI, sans-serif",
+      minHeight: "calc(100vh - 100px)",
     },
     title: {
       textAlign: "center",
@@ -149,10 +266,57 @@ export default function Sales() {
       {error && <p style={styles.error}>{error}</p>}
       {success && <p style={styles.success}>{success}</p>}
 
+      {/* Customer & Discount Controls */}
+      <div style={{ padding: "15px", background: "#f9f9f9", borderRadius: "8px", marginBottom: "20px", border: "1px solid #eee" }}>
+        <h4 style={{ marginTop: 0 }}>Customer & Discounts</h4>
+        <div style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "10px" }}>
+          <input
+            placeholder="Customer Phone"
+            value={customerPhone}
+            onChange={e => setCustomerPhone(e.target.value)}
+            style={{ ...styles.input, width: "200px", margin: 0 }}
+          />
+          <button onClick={checkLoyalty} style={{ ...styles.button, width: "auto", margin: 0, padding: "10px 20px" }}>
+            Check Loyalty
+          </button>
+        </div>
+        {showCreateCustomer && (
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '10px' }}>
+            <input
+              placeholder="Customer Name"
+              value={newCustomerName}
+              onChange={e => setNewCustomerName(e.target.value)}
+              style={{ ...styles.input, width: '200px', margin: 0 }}
+            />
+            <button onClick={createCustomer} style={{ ...styles.button, width: 'auto', margin: 0, padding: '10px 20px' }}>
+              Create Customer
+            </button>
+          </div>
+        )}
+        {customer && (
+          <div style={{ color: "green", fontSize: "14px" }}>
+            Verified: {customer.name}
+            {loyalty ? (
+              <> (Total Spent: ₹{loyalty.totalSpent} • Visits: {loyalty.visitCount} • Eligible Discount: {loyalty.discountPercent}%)</>
+            ) : (
+              <> (Total Spent: ₹{customer.totalSpent})</>
+            )}
+          </div>
+        )}
+
+        <div style={{ marginTop: "10px" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <input type="checkbox" checked={isFestive} onChange={e => setIsFestive(e.target.checked)} />
+            Apply Festive Season Discount (10%)
+          </label>
+        </div>
+      </div>
+
       {/* SELECT + QTY */}
       <AddToCartForm
         clothes={clothes}
         addToCart={addToCart}
+        onBarCodeScan={handleBarcodeScan}
         styles={styles}
       />
 
@@ -167,7 +331,23 @@ export default function Sales() {
               </p>
             </div>
           ))}
-          <h4>Total: ₹{total}</h4>
+          {/* Totals block with preview of discount */}
+          <div style={{ marginTop: "10px" }}>
+            <div>Subtotal: ₹{total}</div>
+            <div>
+              Discount: {isFestive ? "Festive 10%" : (loyalty && loyalty.discountPercent > 0 ? `Loyalty ${loyalty.discountPercent}%` : "None")}
+            </div>
+            <div>
+              Grand Total: ₹{
+                (() => {
+                  const subtotal = total;
+                  const pct = isFestive ? 10 : (loyalty?.discountPercent || 0);
+                  const disc = Math.floor(subtotal * (pct / 100));
+                  return subtotal - disc;
+                })()
+              }
+            </div>
+          </div>
           <button onClick={makeSale} style={styles.button}>
             Complete Sale
           </button>
@@ -184,22 +364,70 @@ export default function Sales() {
   );
 }
 
-function AddToCartForm({ clothes, addToCart, styles }) {
+function AddToCartForm({ clothes, addToCart, onBarCodeScan, styles }) {
   const [clothId, setClothId] = useState("");
   const [qty, setQty] = useState(1);
+  const [barcode, setBarcode] = useState("");
+  const [filterText, setFilterText] = useState("");
+  const [isListening, setIsListening] = useState(false);
+
+  const startVoiceSearch = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Voice search not supported");
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.lang = "en-US";
+    setIsListening(true);
+    recognition.onresult = (e) => {
+      setFilterText(e.results[0][0].transcript.toLowerCase());
+      setIsListening(false);
+    };
+    recognition.onend = () => setIsListening(false);
+    recognition.start();
+  };
+
+  const handleScan = async (e) => {
+    if (e.key === "Enter") {
+      const success = await onBarCodeScan(barcode);
+      if (success) setBarcode("");
+    }
+  };
+
+  const visibleClothes = clothes.filter(c => c.name.toLowerCase().includes(filterText.toLowerCase()));
 
   const selectedCloth = clothes.find((c) => c._id === clothId);
 
   return (
     <div style={styles.row}>
       <div style={{ width: "60%" }}>
+        <input
+          placeholder="Scan Barcode (Press Enter)"
+          value={barcode}
+          onChange={(e) => setBarcode(e.target.value)}
+          onKeyDown={handleScan}
+          style={{ ...styles.input, width: "100%", marginBottom: "10px" }}
+        />
+        <div style={{ display: "flex", gap: "5px", marginBottom: "10px" }}>
+          <input
+            placeholder="Search by name... (or Voice)"
+            value={filterText}
+            onChange={e => setFilterText(e.target.value)}
+            style={{ ...styles.input, width: "100%", marginBottom: 0 }}
+          />
+          <button onClick={startVoiceSearch} style={{
+            padding: "0 15px", borderRadius: "8px", border: "1px solid #ddd", background: isListening ? "red" : "#f0f0f0", cursor: "pointer"
+          }}>🎤</button>
+        </div>
+
         <select
           value={clothId}
           onChange={(e) => setClothId(e.target.value)}
           style={{ ...styles.select, width: "100%" }}
         >
           <option value="">Select Cloth</option>
-          {clothes.map((c) => (
+          {visibleClothes.map((c) => (
             <option key={c._id} value={c._id}>
               {c.name} (Stock: {c.quantity})
             </option>

@@ -29,6 +29,9 @@ app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/clothes", require("./routes/clothesRoutes"));
 app.use("/api/sales", require("./routes/salesRoutes"));
 app.use("/api/payments", require("./routes/paymentRoutes"));
+app.use("/api/customers", require("./routes/customerRoutes"));
+app.use("/api/returns", require("./routes/returnRoutes"));
+app.use("/api/audit", require("./routes/auditRoutes"));
 
 /* ======================
    HEALTH CHECK

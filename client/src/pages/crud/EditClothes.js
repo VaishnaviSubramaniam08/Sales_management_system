@@ -32,7 +32,7 @@ export default function EditClothes() {
   const handleUpdate = async () => {
     try {
       await api.put(`/clothes/${id}`, form);
-      navigate("/dashboard");
+      navigate("/admin/inventory");
     } catch {
       alert("Update failed");
     }

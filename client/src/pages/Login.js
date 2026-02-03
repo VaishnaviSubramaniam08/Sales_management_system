@@ -1,6 +1,7 @@
 import { useState } from "react";
 import api from "../api/axios";
 import { useNavigate, Link } from "react-router-dom";
+import BackButton from "../components/BackButton";
 import "./Login.css";
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -17,14 +18,16 @@ export default function Login() {
       } else {
         navigate("/dashboard");
       }
-    } catch {
-      alert("Login failed");
+    } catch (err) {
+      alert(err.response?.data?.message || "Login failed");
     }
   };
 
   return (
-    <div className="login-container">
-      <h2>Login</h2>
+    <>
+      <BackButton />
+      <div className="login-container">
+        <h2>Login</h2>
 
       <input
         placeholder="Email"
@@ -43,5 +46,6 @@ export default function Login() {
         New user? <Link to="/register">Register</Link>
       </p>
     </div>
+    </>
   );
 }

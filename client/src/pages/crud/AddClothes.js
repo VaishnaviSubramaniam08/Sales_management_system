@@ -12,6 +12,7 @@ export default function AddClothes() {
     { name: "color", placeholder: "Color" },
     { name: "price", placeholder: "Price", type: "number" },
     { name: "quantity", placeholder: "Quantity", type: "number" },
+    { name: "barcode", placeholder: "Barcode (Scan or Type)" },
   ];
 
   const [form, setForm] = useState({
@@ -21,6 +22,7 @@ export default function AddClothes() {
     color: "",
     price: "",
     quantity: "",
+    barcode: "",
     image: null,
   });
 
@@ -31,30 +33,23 @@ export default function AddClothes() {
     setError("");
     setSuccess("");
 
-    // Validation
-    for (let key in form) {
-      if (!form[key]) {
-        setError("All fields are required");
-        return;
-      }
+    const requiredFields = ["name", "category", "size", "color", "price", "quantity"];
+    const missing = requiredFields.filter(field => !form[field]);
+
+    if (missing.length > 0) {
+      setError(`Missing required fields: ${missing.join(", ")}`);
+      return;
     }
 
-    // Numeric validation
     if (Number(form.price) <= 0 || Number(form.quantity) <= 0) {
       setError("Price and Quantity must be greater than 0");
       return;
     }
 
     const formData = new FormData();
-    formData.append("name", form.name);
-    formData.append("category", form.category);
-    formData.append("size", form.size);
-    formData.append("color", form.color);
-    formData.append("price", form.price);
-    formData.append("quantity", form.quantity);
-    if (form.image) {
-      formData.append("image", form.image);
-    }
+    Object.keys(form).forEach(key => {
+      if (form[key] !== null) formData.append(key, form[key]);
+    });
 
     try {
       await api.post("/clothes/add", formData, {
@@ -63,21 +58,19 @@ export default function AddClothes() {
 
       setSuccess("Clothes added successfully!");
 
-      // Reset form
       setForm({
         name: "",
         category: "",
         size: "",
         color: "",
         price: "",
-        price: "",
         quantity: "",
+        barcode: "",
         image: null,
       });
 
-      // Navigate back to dashboard
       setTimeout(() => {
-        navigate("/dashboard");
+        navigate("/admin/inventory");
       }, 1000);
     } catch (err) {
       setError("Failed to add clothes");
@@ -87,89 +80,113 @@ export default function AddClothes() {
   // ====== Inline Styles ======
   const styles = {
     container: {
-      maxWidth: "500px",
+      maxWidth: "550px",
       margin: "50px auto",
-      padding: "30px 25px",
-      background: "#fff",
-      borderRadius: "12px",
-      boxShadow: "0 10px 25px rgba(0, 0, 0, 0.08)",
+      padding: "35px 30px",
+      background: "#fdf6ed",
+      borderRadius: "16px",
+      boxShadow: "0 12px 30px rgba(0, 0, 0, 0.08)",
       fontFamily: "Segoe UI, sans-serif",
+      position: "relative",
     },
     title: {
       textAlign: "center",
       color: "#3a2b1b",
-      marginBottom: "20px",
+      marginBottom: "25px",
+      fontSize: "26px",
+      fontWeight: "600",
     },
     input: {
       width: "100%",
-      padding: "12px 14px",
-      marginBottom: "14px",
+      padding: "14px 16px",
+      marginBottom: "16px",
       border: "1px solid #d4cbbd",
-      borderRadius: "8px",
+      borderRadius: "10px",
       fontSize: "15px",
       outline: "none",
       transition: "0.2s",
     },
     button: {
       width: "100%",
-      padding: "12px",
+      padding: "14px",
       background: "#7b5a2b",
       color: "#fff",
       border: "none",
-      borderRadius: "10px",
+      borderRadius: "12px",
       fontSize: "16px",
       cursor: "pointer",
-      marginTop: "10px",
+      marginTop: "12px",
+      fontWeight: "500",
+    },
+    backButton: {
+      position: "absolute",
+      top: "20px",
+      left: "20px",
+      padding: "10px 16px",
+      background: "#ccc",
+      color: "#333",
+      border: "none",
+      borderRadius: "10px",
+      fontSize: "14px",
+      cursor: "pointer",
+      fontWeight: "500",
     },
     error: {
       color: "#ff3b3b",
       textAlign: "center",
-      marginBottom: "12px",
+      marginBottom: "14px",
+      fontWeight: "500",
     },
     success: {
       color: "#2a8a2a",
       textAlign: "center",
-      marginBottom: "12px",
+      marginBottom: "14px",
+      fontWeight: "500",
+    },
+    label: {
+      display: "block",
+      marginBottom: "6px",
+      color: "#666",
+      fontSize: "14px",
+      fontWeight: "500",
     },
   };
 
   return (
-    <div style={styles.container}>
-      <h2 style={styles.title}>Add Clothes</h2>
+    <div style={{ position: "relative" }}>
+      <div style={styles.container}>
+        <h2 style={styles.title}>Add Clothes</h2>
 
-      {error && <p style={styles.error}>{error}</p>}
-      {success && <p style={styles.success}>{success}</p>}
+        {error && <p style={styles.error}>{error}</p>}
+        {success && <p style={styles.success}>{success}</p>}
 
-      {fields.map((field) => (
-        <input
-          key={field.name}
-          placeholder={field.placeholder}
-          value={form[field.name]}
-          type={field.type || "text"}
-          onChange={(e) =>
-            setForm({ ...form, [field.name]: e.target.value })
-          }
-          style={styles.input}
-        />
-      ))}
+        {fields.map((field) => (
+          <input
+            key={field.name}
+            placeholder={field.placeholder}
+            value={form[field.name]}
+            type={field.type || "text"}
+            onChange={(e) =>
+              setForm({ ...form, [field.name]: e.target.value })
+            }
+            style={styles.input}
+          />
+        ))}
 
-      <div style={{ marginBottom: "14px" }}>
-        <label style={{ display: "block", marginBottom: "5px", color: "#666" }}>
-          Upload Image
-        </label>
-        <input
-          type="file"
-          accept="image/*"
-          onChange={(e) =>
-            setForm({ ...form, image: e.target.files[0] })
-          }
-          style={styles.input}
-        />
+        <div style={{ marginBottom: "16px" }}>
+          <label style={styles.label}>Upload Image</label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => setForm({ ...form, image: e.target.files[0] })}
+            style={styles.input}
+          />
+        </div>
+
+        <button onClick={handleSubmit} style={styles.button}>
+          Add
+        </button>
       </div>
-
-      <button onClick={handleSubmit} style={styles.button}>
-        Add
-      </button>
     </div>
   );
 }

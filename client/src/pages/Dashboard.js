@@ -1,14 +1,9 @@
-import { useEffect, useState } from "react";
-import api from "../api/axios";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, Outlet, useLocation } from "react-router-dom";
+import BackButton from "../components/BackButton";
 
 export default function Dashboard() {
-  const [clothes, setClothes] = useState([]);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    api.get("/clothes").then(res => setClothes(res.data));
-  }, []);
+  const location = useLocation();
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -16,187 +11,117 @@ export default function Dashboard() {
     navigate("/");
   };
 
-  // ----- Inline Styles -----
+  const colors = {
+    background: "#f5f5f5",
+    sidebar: "#5C4033",
+    text: "#333",
+    cardBg: "#fff",
+    accent: "#A67C52",
+    sidebarText: "#fff"
+  };
+
   const styles = {
-    dashboard: {
-      padding: "20px",
-      background: "#f5f5f5",
+    layout: {
       minHeight: "100vh",
       fontFamily: "Arial, sans-serif",
+      background: colors.background,
+      paddingLeft: "260px",
     },
-    dashHeader: {
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      marginBottom: "25px",
-    },
-    brand: {
-      fontSize: "24px",
-      fontWeight: "bold",
-      color: "#222",
-    },
-    dashLinks: {
-      display: "flex",
-      alignItems: "center",
-    },
-    btn: {
-      textDecoration: "none",
-      padding: "10px 18px",
-      borderRadius: "8px",
-      marginLeft: "10px",
-      background: "#000",
-      color: "#fff",
-      fontWeight: "600",
-      border: "none",
-      cursor: "pointer",
-    },
-    outlineBtn: {
-      background: "transparent",
-      border: "2px solid #000",
-      color: "#000",
-    },
-    dangerBtn: {
-      background: "#d32f2f",
-      color: "#fff",
-    },
-    dashMain: {
-      background: "#fff",
-      padding: "20px",
-      borderRadius: "16px",
-      boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
-    },
-    dashTitle: {
-      marginBottom: "20px",
-      color: "#333",
-    },
-    inventoryGrid: {
-      display: "grid",
-      gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
-      gap: "40px 20px",
-      marginTop: "20px"
-    },
-    card: {
-      background: "transparent",
+    sidebar: {
+      width: "260px",
+      background: colors.sidebar,
+      color: colors.sidebarText,
       display: "flex",
       flexDirection: "column",
-      alignItems: "center", // Center everything
+      padding: "30px 20px",
+      boxShadow: "2px 0 10px rgba(0,0,0,0.1)",
+      position: "fixed",
+      height: "100vh",
+      left: 0,
+      top: 0,
+      boxSizing: "border-box",
+      zIndex: 1000,
     },
-    cardName: {
-      fontWeight: "600",
-      fontSize: "16px",
-      marginBottom: "4px",
+    nav: {
+      flex: 1,
+      overflowY: "auto",
+      marginBottom: "20px",
+      paddingRight: "5px",
+    },
+    brand: {
+      fontSize: "20px",
+      fontWeight: "bold",
+      marginBottom: "40px",
       textAlign: "center",
-      color: "#111",
+      letterSpacing: "1px",
     },
-    cardQty: {
-      color: "#666",
-      fontSize: "14px",
-      textAlign: "center",
-    },
-    qtySpan: {
+    sideBtn: {
+      textDecoration: "none",
+      color: "rgba(255,255,255,0.7)",
+      padding: "12px 16px",
+      marginBottom: "8px",
+      borderRadius: "8px",
       fontWeight: "600",
-      color: "#000",
+      transition: "all 0.3s",
+      display: "block",
+    },
+    activeSideBtn: {
+      background: "#A67C52",
+      color: "#fff",
+    },
+    logoutBtn: {
+      marginTop: "auto",
+      background: "#d32f2f",
+      color: "#fff",
+      padding: "12px",
+      borderRadius: "8px",
+      border: "none",
+      cursor: "pointer",
+      fontWeight: "bold",
+    },
+    content: {
+      padding: "48px 30px 30px",
+      minHeight: "100vh",
+      position: "relative",
     },
   };
 
+  const menuItems = [
+    { label: "Inventory", path: "/dashboard" },
+    { label: "Sales", path: "/dashboard/sales" },
+    { label: "Returns", path: "/dashboard/returns" },
+  ];
+
   return (
-    <div style={styles.dashboard}>
-      <header style={styles.dashHeader}>
-        <div style={styles.brand}>SELVALAKSHMI GARMENTS</div>
-
-        <div style={styles.dashLinks}>
-
-
-          <Link to="/sales" style={{ ...styles.btn, ...styles.outlineBtn }}>
-            Sales
-          </Link>
-
-          <button
-            onClick={handleLogout}
-            style={{ ...styles.btn, ...styles.dangerBtn }}
-          >
-            Logout
-          </button>
-        </div>
-      </header>
-
-      <main style={styles.dashMain}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-          <h2 style={{ margin: 0 }}>Inventory</h2>
-          <input
-            placeholder="Search clothes..."
-            onChange={(e) => api.get(`/clothes?search=${e.target.value}`).then(res => setClothes(res.data))}
-            style={{ padding: "8px", borderRadius: "5px", border: "1px solid #ccc", width: "250px" }}
-          />
-        </div>
-
-        <div style={styles.inventoryGrid}>
-          {clothes.map((c) => (
-            <div style={styles.card} key={c._id}>
-              {/* Image Section */}
-              <div style={{
-                width: "100%",
-                aspectRatio: "3/4",
-                marginBottom: "15px",
-                borderRadius: "8px",
-                overflow: "hidden",
-                height: "auto", // Let aspect ratio drive height
-                backgroundColor: "#f0f0f0", // Subtle placeholder
-                position: "relative"
-              }}>
-                {c.image ? (
-                  <img
-                    src={`http://localhost:5000${c.image}`}
-                    alt={c.name}
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover", // Cover to match the reference look
-                      transition: "transform 0.3s ease",
-                    }}
-                    onMouseOver={e => e.currentTarget.style.transform = "scale(1.05)"}
-                    onMouseOut={e => e.currentTarget.style.transform = "scale(1)"}
-                  />
-                ) : (
-                  <div style={{
-                    width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#aaa"
-                  }}>
-                    No Image
-                  </div>
-                )}
-              </div>
-
-              {/* Content Section */}
-              <div style={styles.cardName}>{c.name}</div>
-              <div style={styles.cardQty}>
-                {c.category} <span style={{ margin: "0 5px" }}>•</span> ₹{c.price}
-              </div>
-              <div style={{ fontSize: "12px", color: "#888", marginTop: "5px", textAlign: "center" }}>
-                {c.quantity} items left
-              </div>
-
-              {/* Actions */}
-              {localStorage.getItem("role") === "admin" && (
-                <div style={{ marginTop: "15px", display: "flex", justifyContent: "center", gap: "10px" }}>
-                  <Link to={`/edit/${c._id}`} style={{ textDecoration: "none", fontSize: "12px", background: "#333", color: "white", padding: "8px 16px", borderRadius: "20px" }}>
-                    Edit
-                  </Link>
-                  <button
-                    onClick={async () => {
-                      if (window.confirm("Are you sure?")) {
-                        await api.delete(`/clothes/${c._id}`);
-                        setClothes(clothes.filter(x => x._id !== c._id));
-                      }
-                    }}
-                    style={{ border: "none", fontSize: "12px", background: "transparent", color: "#d32f2f", padding: "8px 16px", cursor: "pointer", textDecoration: "underline" }}
-                  >
-                    Delete
-                  </button>
-                </div>
-              )}
-            </div>
+    <div style={styles.layout}>
+      {/* Sidebar */}
+      <aside style={styles.sidebar}>
+        <div style={styles.brand}>SELVALAKSHMI</div>
+        
+        <nav style={styles.nav}>
+          {menuItems.map((item) => (
+            <Link
+              key={item.path}
+              to={item.path}
+              style={{
+                ...styles.sideBtn,
+                ...(location.pathname === item.path ? styles.activeSideBtn : {}),
+              }}
+            >
+              {item.label}
+            </Link>
           ))}
-        </div>
+        </nav>
+
+        <button onClick={handleLogout} style={styles.logoutBtn}>
+          Logout
+        </button>
+      </aside>
+
+      {/* Main Content */}
+      <main style={styles.content}>
+        <BackButton customStyle={{ position: "static", marginBottom: "20px" }} />
+        <Outlet />
       </main>
     </div>
   );

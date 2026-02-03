@@ -10,6 +10,16 @@ const saleSchema = new mongoose.Schema({
   ],
   totalAmount: Number,
   soldBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  customerId: { type: mongoose.Schema.Types.ObjectId, ref: "Customer" },
+  discountDetails: {
+    type: { type: String },
+    amount: { type: Number, default: 0 }
+  },
+  status: {
+    type: String,
+    enum: ["Completed", "Returned", "Partial Return"],
+    default: "Completed"
+  },
   paymentId: { type: mongoose.Schema.Types.ObjectId, ref: "Payment" },
   paymentStatus: {
     type: String,

@@ -1,0 +1,96 @@
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 60px;
+  background: var(--color-bg);
+}
+
+.brand {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--color-sidebar);
+  text-decoration: none;
+}
+
+/* Menu */
+.menu {
+  display: flex;
+  gap: 25px;
+  align-items: center;
+}
+
+.menuItem {
+  text-decoration: none;
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.loginBtn {
+  padding: 10px 20px;
+  background: var(--color-accent);
+  color: var(--color-card);
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+/* Hamburger for mobile */
+.hamburger {
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+  cursor: pointer;
+}
+
+.hamburger span {
+  display: block;
+  width: 25px;
+  height: 3px;
+  background: var(--color-sidebar);
+  border-radius: 2px;
+  transition: all 0.3s ease;
+}
+
+.hamburger.active span:nth-child(1) {
+  transform: rotate(45deg) translate(5px, 5px);
+}
+.hamburger.active span:nth-child(2) {
+  opacity: 0;
+}
+.hamburger.active span:nth-child(3) {
+  transform: rotate(-45deg) translate(5px, -5px);
+}
+
+@media (max-width: 1024px) {
+  .topbar { padding: 15px 30px; }
+  .menu { gap: 15px; }
+}
+
+@media (max-width: 768px) {
+  .hamburger { display: flex; }
+
+  .menu {
+    display: none;
+    flex-direction: column;
+    width: 100%;
+    gap: 10px;
+    margin-top: 10px;
+    background: var(--color-bg);
+    padding: 10px 0;
+  }
+
+  .menu.active { display: flex; }
+
+  .topbar { flex-direction: row; flex-wrap: wrap; align-items: center; }
+  
+  /* Ensure brand and hamburger stay on same line */
+  .brand { flex: 1; }
+  .hamburger { order: 2; }
+  .menu { order: 3; }
+}
+
+@media (max-width: 480px) {
+  .topbar { padding: 10px 16px; }
+  .brand { font-size: 18px; }
+}

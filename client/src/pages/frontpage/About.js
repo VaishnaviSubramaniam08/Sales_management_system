@@ -1,30 +1,46 @@
 import { Link } from "react-router-dom";
 import "./Pages.css";
+import Navbar from "./Navbar";
+import heroImg from "../../assets/about.jpg";
+import teamMain from "../../assets/cloth.jpg";
+
 
 export default function About() {
   return (
     <div className="page">
-      <div className="topbar">
-        <div className="brand">SELVALAKSHMI GARMENTS</div>
+      <Navbar />
 
-        <div className="menu">
-          <Link to="/" className="menuItem">Home</Link>
-          <Link to="/collections" className="menuItem">Collections</Link>
-          <Link to="/brands" className="menuItem">Brands</Link>
-          <Link to="/about" className="menuItem">About</Link>
+      {/* Hero section with background image and overlay text */}
+      <section className="about-hero">
+        <img src={heroImg} alt="Team celebrating outdoors" />
+        <div className="about-heroOverlay">
+          <h1>About Us</h1>
+          <p>For explorers everywhere.</p>
         </div>
+      </section>
 
-        <Link to="/login">
-          <button className="loginBtn">Login</button>
-        </Link>
-      </div>
-
+      {/* Team section with media on left and contact form on right */}
       <div className="content">
-        <h1>About Us</h1>
-        <p>
-          We are a leading garment store focused on providing premium quality clothing.
-          Our mission is to deliver style, comfort, and value to every customer.
-        </p>
+        <section className="team-section">
+          <div className="team-media">
+            <img className="team-main" src={teamMain} alt="Team in the field" />
+
+          </div>
+
+          <div className="team-copy">
+            <form className="contact-form" onSubmit={(e) => e.preventDefault()}>
+                <h1>Contact Us</h1>
+              <div className="form-row">
+              
+                <input className="input" type="text" placeholder="Your Name" required />
+                <br/>
+                <input className="input" type="email" placeholder="Your Email" required />
+              </div>
+              <textarea className="textarea" rows="6" placeholder="Your Message"></textarea>
+              <button className="brand-btn primary" type="submit">Send Message</button>
+            </form>
+          </div>
+        </section>
       </div>
     </div>
   );

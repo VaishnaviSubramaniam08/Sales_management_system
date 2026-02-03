@@ -2,6 +2,7 @@ const express = require("express");
 const Payment = require("../models/Payment");
 const Sale = require("../models/Sale");
 const { protect } = require("../middleware/authMiddleware");
+const AuditLog = require("../models/AuditLog");
 
 const router = express.Router();
 
@@ -33,6 +34,16 @@ router.post("/process", async (req, res) => {
         sale.paymentId = payment._id;
         sale.paymentStatus = "Paid";
         await sale.save();
+
+        // Audit log
+        await AuditLog.create({
+            action: "PAYMENT_SUCCESS",
+            user: req.user.id,
+            role: req.user.role,
+            entityType: "Payment",
+            entityId: String(payment._id),
+            metadata: { saleId, amount, method, transactionId: payment.transactionId }
+        });
 
         res.json({ message: "Payment successful", payment });
     } catch (err) {

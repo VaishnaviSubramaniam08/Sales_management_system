@@ -29,7 +29,7 @@ router.use(protect);
    ====================== */
 router.post("/add", admin, upload.single("image"), async (req, res) => {
   try {
-    const { name, category, size, color, price, quantity } = req.body;
+    const { name, category, size, color, price, quantity, barcode, reorderLevel } = req.body;
     const image = req.file ? `/uploads/${req.file.filename}` : "";
 
     const cloth = new Clothes({
@@ -40,6 +40,8 @@ router.post("/add", admin, upload.single("image"), async (req, res) => {
       price,
       quantity,
       image,
+      barcode,
+      reorderLevel: reorderLevel ? Number(reorderLevel) : undefined,
     });
     await cloth.save();
     res.json({ message: "Clothes added successfully" });
@@ -53,11 +55,14 @@ router.post("/add", admin, upload.single("image"), async (req, res) => {
    ====================== */
 router.get("/", async (req, res) => {
   try {
-    const { search } = req.query;
+    const { search, maxPrice } = req.query;
 
     let query = {};
     if (search) {
       query.name = { $regex: search, $options: "i" };
+    }
+    if (maxPrice) {
+      query.price = { $lte: Number(maxPrice) };
     }
 
     const clothes = await Clothes.find(query);
@@ -91,6 +96,9 @@ router.put("/:id", admin, upload.single("image"), async (req, res) => {
     if (req.file) {
       updateData.image = `/uploads/${req.file.filename}`;
     }
+    if (typeof updateData.reorderLevel !== 'undefined') {
+      updateData.reorderLevel = Number(updateData.reorderLevel);
+    }
     await Clothes.findByIdAndUpdate(req.params.id, updateData);
     res.json({ message: "Clothes updated successfully" });
   } catch (err) {
@@ -118,9 +126,28 @@ router.delete("/:id", admin, async (req, res) => {
    ====================== */
 router.get("/alerts/low-stock", async (req, res) => {
   try {
-    const threshold = Number(req.query.threshold) || 5;
-    const items = await Clothes.find({ quantity: { $lte: threshold } });
+    const threshold = req.query.threshold ? Number(req.query.threshold) : null;
+    let items;
+    if (threshold !== null) {
+      items = await Clothes.find({ quantity: { $lte: threshold } });
+    } else {
+      // Use per-item reorderLevel when no threshold is provided
+      items = await Clothes.find({ $expr: { $lte: ["$quantity", "$reorderLevel"] } });
+    }
     res.json(items);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* ======================
+   SCAN BARCODE
+   ====================== */
+router.get("/barcode/:code", async (req, res) => {
+  try {
+    const cloth = await Clothes.findOne({ barcode: req.params.code });
+    if (!cloth) return res.status(404).json({ message: "Product not found" });
+    res.json(cloth);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

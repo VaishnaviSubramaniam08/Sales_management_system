@@ -1,40 +1,38 @@
 import { Link } from "react-router-dom";
 import "./Pages.css";
+import Navbar from "./Navbar";
+import heroImg from "../../assets/Ordinaree-39.webp";
 
 export default function Brands() {
   return (
     <div className="page">
-      <div className="topbar">
-        <div className="brand">SELVALAKSHMI GARMENTS</div>
+      <Navbar />
 
-        <div className="menu">
-          <Link to="/" className="menuItem">Home</Link>
-          <Link to="/collections" className="menuItem">Collections</Link>
-          <Link to="/brands" className="menuItem">Brands</Link>
-          <Link to="/about" className="menuItem">About</Link>
+      <div className="content brand-hero">
+        <div className="brand-left">
+          <div className="brand-photo">
+            <img src={heroImg} alt="Fashion styling" />
+          </div>
         </div>
 
-        <Link to="/login">
-          <button className="loginBtn">Login</button>
-        </Link>
-      </div>
+        <div className="brand-right">
+          <h1 className="brand-title">
+            <span className="accent">Find your</span> fashion’s fit
+          </h1>
+          <p className="brand-sub">
+            Discover styles that match your brand. Explore fabrics, cuts, and curated looks crafted by our team.
+          </p>
 
-      <div className="content">
-        <h1>Brands We Offer</h1>
-        <p>Explore premium brands available in our store.</p>
+          <div className="brand-divider">
+            <span />
+          </div>
 
-        <div className="cardRow">
-          <div className="card">
-            <h2>Brand A</h2>
-            <p>Quality & Comfort</p>
-          </div>
-          <div className="card">
-            <h2>Brand B</h2>
-            <p>Style & Trend</p>
-          </div>
-          <div className="card">
-            <h2>Brand C</h2>
-            <p>Classic & Elegant</p>
+          <div className="brand-form">
+            <input className="brand-input" placeholder="Enter your brand name" />
+            <div className="brand-actions">
+              <button className="brand-btn primary">Explore</button>
+              <button className="brand-btn ghost">Later</button>
+            </div>
           </div>
         </div>
       </div>

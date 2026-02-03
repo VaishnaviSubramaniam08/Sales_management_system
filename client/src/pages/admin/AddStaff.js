@@ -31,12 +31,12 @@ export default function AddStaff() {
 
   return (
     <div style={styles.page}>
-      <div style={styles.card}>
-        <h2 style={styles.heading}>➕ Add Staff Account</h2>
-        <p style={styles.subtext}>
-          Staff can login and manage sales & stock (no admin rights)
-        </p>
+      <h2 style={styles.heading}>➕ Add Staff Account</h2>
+      <p style={styles.subtext}>
+        Staff can login and manage sales & stock (no admin rights)
+      </p>
 
+      <div style={{ maxWidth: "400px", margin: "0 auto" }}>
         <input
           style={styles.input}
           placeholder="Staff Name"
