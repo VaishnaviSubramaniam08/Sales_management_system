@@ -1,16 +1,30 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import api from "../../api/axios";
 import { useNavigate } from "react-router-dom";
 
 export default function AddClothes() {
   const navigate = useNavigate();
+  const [suppliers, setSuppliers] = useState([]);
+
+  useEffect(() => {
+    const fetchSuppliers = async () => {
+      try {
+        const res = await api.get("/suppliers");
+        setSuppliers(res.data);
+      } catch (err) {
+        console.error("Failed to fetch suppliers");
+      }
+    };
+    fetchSuppliers();
+  }, []);
 
   const fields = [
     { name: "name", placeholder: "Name" },
     { name: "category", placeholder: "Category" },
     { name: "size", placeholder: "Size" },
     { name: "color", placeholder: "Color" },
-    { name: "price", placeholder: "Price", type: "number" },
+    { name: "price", placeholder: "Selling Price", type: "number" },
+    { name: "costPrice", placeholder: "Cost Price (Buying Price)", type: "number" },
     { name: "quantity", placeholder: "Quantity", type: "number" },
     { name: "barcode", placeholder: "Barcode (Scan or Type)" },
   ];
@@ -21,10 +35,18 @@ export default function AddClothes() {
     size: "",
     color: "",
     price: "",
+    costPrice: "",
     quantity: "",
     barcode: "",
+    supplier: "",
     image: null,
   });
+
+  const generateBarcode = () => {
+    // Generate a simple numeric barcode based on timestamp and random number
+    const code = "CLO-" + Date.now().toString().slice(-8) + Math.floor(Math.random() * 100);
+    setForm({ ...form, barcode: code });
+  };
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -33,7 +55,7 @@ export default function AddClothes() {
     setError("");
     setSuccess("");
 
-    const requiredFields = ["name", "category", "size", "color", "price", "quantity"];
+    const requiredFields = ["name", "category", "size", "color", "price", "costPrice", "quantity"];
     const missing = requiredFields.filter(field => !form[field]);
 
     if (missing.length > 0) {
@@ -41,14 +63,23 @@ export default function AddClothes() {
       return;
     }
 
-    if (Number(form.price) <= 0 || Number(form.quantity) <= 0) {
-      setError("Price and Quantity must be greater than 0");
+    if (Number(form.price) <= 0 || Number(form.costPrice) < 0 || Number(form.quantity) <= 0) {
+      setError("Price, Cost Price and Quantity must be valid numbers");
       return;
+    }
+
+    let finalBarcode = form.barcode;
+    if (!finalBarcode) {
+      finalBarcode = "CLO-" + Date.now().toString().slice(-8) + Math.floor(Math.random() * 100);
     }
 
     const formData = new FormData();
     Object.keys(form).forEach(key => {
-      if (form[key] !== null) formData.append(key, form[key]);
+      if (key === "barcode") {
+        formData.append(key, finalBarcode);
+      } else if (form[key] !== null) {
+        formData.append(key, form[key]);
+      }
     });
 
     try {
@@ -64,8 +95,10 @@ export default function AddClothes() {
         size: "",
         color: "",
         price: "",
+        costPrice: "",
         quantity: "",
         barcode: "",
+        supplier: "",
         image: null,
       });
 
@@ -161,17 +194,51 @@ export default function AddClothes() {
         {success && <p style={styles.success}>{success}</p>}
 
         {fields.map((field) => (
-          <input
-            key={field.name}
-            placeholder={field.placeholder}
-            value={form[field.name]}
-            type={field.type || "text"}
-            onChange={(e) =>
-              setForm({ ...form, [field.name]: e.target.value })
-            }
-            style={styles.input}
-          />
+          <div key={field.name} style={{ position: 'relative' }}>
+            <input
+              placeholder={field.placeholder}
+              value={form[field.name]}
+              type={field.type || "text"}
+              onChange={(e) =>
+                setForm({ ...form, [field.name]: e.target.value })
+              }
+              style={styles.input}
+            />
+            {field.name === "barcode" && (
+              <button 
+                onClick={generateBarcode}
+                style={{
+                  position: 'absolute',
+                  right: '10px',
+                  top: '10px',
+                  padding: '6px 10px',
+                  background: '#333',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  cursor: 'pointer'
+                }}
+              >
+                Generate
+              </button>
+            )}
+          </div>
         ))}
+
+        <div style={{ marginBottom: "16px" }}>
+          <label style={styles.label}>Supplier</label>
+          <select
+            value={form.supplier}
+            onChange={(e) => setForm({ ...form, supplier: e.target.value })}
+            style={styles.input}
+          >
+            <option value="">Select Supplier</option>
+            {suppliers.map(s => (
+              <option key={s._id} value={s._id}>{s.name}</option>
+            ))}
+          </select>
+        </div>
 
         <div style={{ marginBottom: "16px" }}>
           <label style={styles.label}>Upload Image</label>

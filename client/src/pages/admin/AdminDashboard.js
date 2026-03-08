@@ -10,8 +10,7 @@ export default function AdminDashboard() {
     localStorage.removeItem("role");
     navigate("/");
   };
-
-  // Colors sourced from global CSS variables for consistency
+  
   const colors = {
     background: "var(--color-bg)",
     sidebar: "var(--color-sidebar)",

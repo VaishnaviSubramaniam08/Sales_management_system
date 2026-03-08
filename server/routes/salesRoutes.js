@@ -16,8 +16,8 @@ router.use(protect);
    ====================== */
 router.post("/add", async (req, res) => {
   try {
-    const { items, customerId, discountDetails } = req.body;
-    let totalAmount = 0;
+    const { items, customerId, discountDetails, taxDetails } = req.body;
+    let subtotal = 0;
 
     for (let item of items) {
       const cloth = await Clothes.findById(item.clothId);
@@ -33,17 +33,26 @@ router.post("/add", async (req, res) => {
       cloth.quantity -= item.quantity;
       await cloth.save();
 
-      // Use item.price from frontend if discount applied there, or calculate?
+      // Update Cart Items to include current costPrice for Profit calculation later
+      item.costPrice = cloth.costPrice || 0;
+
       // For safety, base price from DB, but apply discount if global?
       // Let's assume frontend sends final price in item if row-level? 
       // OR we calculate standard here:
-      const lineTotal = cloth.price * item.quantity;
-      totalAmount += lineTotal;
+      const lineTotal = item.price * item.quantity;
+      subtotal += lineTotal;
     }
+
+    let totalAmount = subtotal;
 
     // Apply Global Discount if present
     if (discountDetails && discountDetails.amount) {
       totalAmount -= discountDetails.amount;
+    }
+
+    // Apply Tax if present
+    if (taxDetails && taxDetails.amount) {
+      totalAmount += taxDetails.amount;
     }
 
     const sale = new Sale({
@@ -51,7 +60,8 @@ router.post("/add", async (req, res) => {
       totalAmount,
       soldBy: req.user.id,
       customerId,
-      discountDetails
+      discountDetails,
+      taxDetails
     });
 
     // Update Customer Stats
@@ -277,6 +287,12 @@ router.get("/invoice/:id", async (req, res) => {
       doc.text(`${item.clothId?.name || "Item"} x ${item.quantity} = Rs. ${item.price * item.quantity}`);
     });
     doc.text("-------------------------------------------------");
+    if (sale.discountDetails && sale.discountDetails.amount > 0) {
+      doc.text(`Discount (${sale.discountDetails.type}): -Rs. ${sale.discountDetails.amount}`, { align: "right" });
+    }
+    if (sale.taxDetails && sale.taxDetails.amount > 0) {
+      doc.text(`Tax (GST ${sale.taxDetails.rate}%): +Rs. ${sale.taxDetails.amount}`, { align: "right" });
+    }
     doc.fontSize(14).text(`Total Amount: Rs. ${sale.totalAmount}`, { align: "right" });
 
     if (sale.paymentStatus === "Paid") {

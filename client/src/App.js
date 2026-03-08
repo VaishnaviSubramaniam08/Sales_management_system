@@ -17,6 +17,10 @@ import SalesOversight from "./pages/admin/SalesOversight";
 import StaffManagement from "./pages/admin/StaffManagement";
 import AddStaff from "./pages/admin/AddStaff";
 import ReviewStaff from "./pages/admin/ReviewStaff";
+import SupplierManagement from "./pages/admin/SupplierManagement";
+import GeneralSettings from "./pages/admin/GeneralSettings";
+import ExpenseTracker from "./pages/admin/ExpenseTracker";
+import ProfitLossReport from "./pages/admin/ProfitLossReport";
 import Reports from "./pages/Reports";
 import Returns from "./pages/Returns";
 import PrivateRoute from "./PrivateRoute";
@@ -53,6 +57,10 @@ function App() {
           <Route path="staff" element={<StaffManagement />} />
           <Route path="sales-oversight" element={<SalesOversight />} />
           <Route path="review-staff" element={<ReviewStaff />} />
+          <Route path="suppliers" element={<SupplierManagement />} />
+          <Route path="settings" element={<GeneralSettings />} />
+          <Route path="expenses" element={<ExpenseTracker />} />
+          <Route path="profit-loss" element={<ProfitLossReport />} />
           <Route path="edit/:id" element={<EditClothes />} />
         </Route>
         <Route

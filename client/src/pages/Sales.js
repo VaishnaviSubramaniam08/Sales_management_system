@@ -10,17 +10,57 @@ export default function Sales() {
 
   useEffect(() => {
     fetchClothes();
-  }, []);
+
+    // Global barcode scanner listener
+    let barcodeBuffer = "";
+    let lastKeyTime = Date.now();
+
+    const handleGlobalKeyDown = (e) => {
+      // Ignore if user is typing in an input or textarea
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") {
+        return;
+      }
+
+      const currentTime = Date.now();
+      
+      // If time between keys is > 50ms, it's likely manual typing, so reset buffer
+      if (currentTime - lastKeyTime > 50) {
+        barcodeBuffer = "";
+      }
+
+      if (e.key === "Enter") {
+        if (barcodeBuffer.length > 3) {
+          handleBarcodeScan(barcodeBuffer);
+          barcodeBuffer = "";
+        }
+      } else if (e.key.length === 1) {
+        barcodeBuffer += e.key;
+      }
+
+      lastKeyTime = currentTime;
+    };
+
+    window.addEventListener("keydown", handleGlobalKeyDown);
+    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
+  }, [clothes]); // Re-bind if clothes change so handleBarcodeScan has fresh data if needed, 
+                 // though handleBarcodeScan uses api.get, it's safer to include deps if it uses state.
 
   const fetchClothes = async () => {
     const res = await api.get("/clothes");
     setClothes(res.data);
+    try {
+      const settings = await api.get("/settings/gst_rate");
+      setGstRate(settings.data.value);
+    } catch (e) {
+      setGstRate(0);
+    }
   };
 
   const [customerPhone, setCustomerPhone] = useState("");
   const [customer, setCustomer] = useState(null);
   const [isFestive, setIsFestive] = useState(false);
   const [loyalty, setLoyalty] = useState(null); // { discountPercent, totalSpent, visitCount, ... }
+  const [gstRate, setGstRate] = useState(0);
   const [newCustomerName, setNewCustomerName] = useState("");
   const [showCreateCustomer, setShowCreateCustomer] = useState(false);
 
@@ -165,15 +205,18 @@ export default function Sales() {
       discountDetails = { type: `loyalty_${pct}`, amount };
     }
 
-    // Note: Backend expects us to subtract this? Or does it recalculated? 
-    // My backend logic just subtracts discountDetails.amount from total if present.
-    // So I need to pass it.
+    const afterDisc = subtotal - discountDetails.amount;
+    const taxAmount = Math.floor(afterDisc * (gstRate / 100));
 
     try {
       const res = await api.post("/sales/add", {
         items: cart,
         customerId: customer ? customer._id : null,
-        discountDetails
+        discountDetails,
+        taxDetails: {
+          rate: gstRate,
+          amount: taxAmount
+        }
       });
       setCurrentSale(res.data.sale);
       setShowPaymentModal(true);
@@ -338,12 +381,25 @@ export default function Sales() {
               Discount: {isFestive ? "Festive 10%" : (loyalty && loyalty.discountPercent > 0 ? `Loyalty ${loyalty.discountPercent}%` : "None")}
             </div>
             <div>
+              Tax (GST {gstRate}%): ₹{
+                (() => {
+                  const subtotal = total;
+                  const pct = isFestive ? 10 : (loyalty?.discountPercent || 0);
+                  const disc = Math.floor(subtotal * (pct / 100));
+                  const afterDisc = subtotal - disc;
+                  return Math.floor(afterDisc * (gstRate / 100));
+                })()
+              }
+            </div>
+            <div>
               Grand Total: ₹{
                 (() => {
                   const subtotal = total;
                   const pct = isFestive ? 10 : (loyalty?.discountPercent || 0);
                   const disc = Math.floor(subtotal * (pct / 100));
-                  return subtotal - disc;
+                  const afterDisc = subtotal - disc;
+                  const tax = Math.floor(afterDisc * (gstRate / 100));
+                  return afterDisc + tax;
                 })()
               }
             </div>

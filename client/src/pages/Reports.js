@@ -34,7 +34,7 @@ export default function Reports() {
             padding: "25px",
             textAlign: "center",
             fontFamily: "Segoe UI, sans-serif",
-            background: "#fff",
+            background: "#fff7ee",
             borderRadius: "16px",
             boxShadow: "0 4px 20px rgba(0,0,0,0.05)",
             minHeight: "calc(100vh - 100px)",

@@ -29,7 +29,7 @@ router.use(protect);
    ====================== */
 router.post("/add", admin, upload.single("image"), async (req, res) => {
   try {
-    const { name, category, size, color, price, quantity, barcode, reorderLevel } = req.body;
+    const { name, category, size, color, price, costPrice, quantity, barcode, reorderLevel, supplier } = req.body;
     const image = req.file ? `/uploads/${req.file.filename}` : "";
 
     const cloth = new Clothes({
@@ -38,9 +38,11 @@ router.post("/add", admin, upload.single("image"), async (req, res) => {
       size,
       color,
       price,
+      costPrice,
       quantity,
       image,
       barcode,
+      supplier: supplier || undefined,
       reorderLevel: reorderLevel ? Number(reorderLevel) : undefined,
     });
     await cloth.save();

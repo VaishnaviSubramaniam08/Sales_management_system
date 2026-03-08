@@ -6,6 +6,7 @@ const saleSchema = new mongoose.Schema({
       clothId: { type: mongoose.Schema.Types.ObjectId, ref: "Clothes" },
       quantity: Number,
       price: Number,
+      costPrice: Number,
     },
   ],
   totalAmount: Number,
@@ -13,6 +14,10 @@ const saleSchema = new mongoose.Schema({
   customerId: { type: mongoose.Schema.Types.ObjectId, ref: "Customer" },
   discountDetails: {
     type: { type: String },
+    amount: { type: Number, default: 0 }
+  },
+  taxDetails: {
+    rate: { type: Number, default: 0 },
     amount: { type: Number, default: 0 }
   },
   status: {

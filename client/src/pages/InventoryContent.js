@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../api/axios";
 import { Link } from "react-router-dom";
+import BarcodeGenerator from "../components/BarcodeGenerator";
 
 export default function InventoryContent() {
   const [clothes, setClothes] = useState([]);
@@ -144,8 +145,42 @@ export default function InventoryContent() {
               {c.category} <span style={{ margin: "0 5px" }}>•</span> ₹{c.price}
             </div>
             <div style={{ fontSize: "12px", color: "#888", marginTop: "5px", textAlign: "center" }}>
-              {c.quantity} items left
+              {c.quantity} items left {c.barcode && <span style={{display: 'block'}}>Barcode: {c.barcode}</span>}
             </div>
+
+            {c.barcode && (
+              <div style={{ marginTop: '10px' }}>
+                <BarcodeGenerator value={c.barcode} width={1.5} height={40} fontSize={12} />
+                <button 
+                  onClick={() => {
+                    const printWindow = window.open('', '_blank');
+                    printWindow.document.write('<html><head><title>Print Barcode</title></head><body>');
+                    printWindow.document.write('<div style="text-align:center; padding: 20px;">');
+                    printWindow.document.write(`<h3>${c.name}</h3>`);
+                    const barcodeSvg = document.getElementById(`barcode-${c.barcode}`);
+                    if (barcodeSvg) {
+                      printWindow.document.write(barcodeSvg.outerHTML);
+                    } else {
+                      printWindow.document.write('Barcode not found');
+                    }
+                    printWindow.document.write('</div>');
+                    printWindow.document.write('</body></html>');
+                    printWindow.document.close();
+                    printWindow.print();
+                  }}
+                  style={{ 
+                    fontSize: '10px', 
+                    padding: '4px 8px', 
+                    background: '#eee', 
+                    border: '1px solid #ccc', 
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Print Barcode
+                </button>
+              </div>
+            )}
 
             {localStorage.getItem("role") === "admin" && (
               <div style={{ marginTop: "15px", display: "flex", justifyContent: "center", gap: "10px" }}>

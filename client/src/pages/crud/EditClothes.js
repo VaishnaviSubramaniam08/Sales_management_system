@@ -23,10 +23,16 @@ export default function EditClothes() {
   const fetchCloth = async () => {
     try {
       const res = await api.get(`/clothes/${id}`);
-      setForm(res.data);
+      const { name, category, size, color, price, quantity, barcode } = res.data;
+      setForm({ name, category, size, color, price, quantity, barcode: barcode || "" });
     } catch {
       alert("Failed to load");
     }
+  };
+
+  const generateBarcode = () => {
+    const code = "CLO-" + Date.now().toString().slice(-8) + Math.floor(Math.random() * 100);
+    setForm({ ...form, barcode: code });
   };
 
   const handleUpdate = async () => {
@@ -43,13 +49,32 @@ export default function EditClothes() {
       <h2>Edit Clothes</h2>
 
       {Object.keys(form).map((key) => (
-        <input
-          key={key}
-          value={form[key]}
-          onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-          placeholder={key}
-          style={{ padding: "10px", width: "100%", marginBottom: "10px" }}
-        />
+        <div key={key} style={{ position: 'relative', marginBottom: "10px" }}>
+          <input
+            value={form[key]}
+            onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+            placeholder={key}
+            style={{ padding: "10px", width: "100%" }}
+          />
+          {key === "barcode" && (
+            <button 
+              onClick={generateBarcode}
+              style={{
+                position: 'absolute',
+                right: '10px',
+                top: '5px',
+                padding: '5px 10px',
+                background: '#333',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }}
+            >
+              Generate
+            </button>
+          )}
+        </div>
       ))}
 
       <button onClick={handleUpdate}>Update</button>

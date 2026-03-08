@@ -96,7 +96,7 @@ export default function Dashboard() {
     <div style={styles.layout}>
       {/* Sidebar */}
       <aside style={styles.sidebar}>
-        <div style={styles.brand}>SELVALAKSHMI</div>
+        <div style={styles.brand}>SELVALAKSHMI GARMENTS</div>
         
         <nav style={styles.nav}>
           {menuItems.map((item) => (
