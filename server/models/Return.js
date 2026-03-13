@@ -10,6 +10,8 @@ const returnSchema = new mongoose.Schema({
     refundAmount: { type: Number, required: true },
     approvalStatus: { type: String, enum: ["approved", "pending", "rejected"], default: "approved" },
     approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    staffId: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // staff who processed or attempted return
+    expirationAttempt: { type: Boolean, default: false }, // If true, return was rejected automatically due to 10-day limit
     approvedAt: { type: Date },
     date: { type: Date, default: Date.now }
 });

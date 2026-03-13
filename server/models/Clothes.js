@@ -10,7 +10,6 @@ const clothesSchema = new mongoose.Schema({
   quantity: { type: Number, required: true },
   supplier: { type: mongoose.Schema.Types.ObjectId, ref: "Supplier" },
   image: { type: String },
-  barcode: { type: String, unique: true, sparse: true },
   reorderLevel: { type: Number, default: 5 },
   createdAt: { type: Date, default: Date.now }
 });

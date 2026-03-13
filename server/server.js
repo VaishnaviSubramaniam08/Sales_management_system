@@ -1,7 +1,8 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-require("dotenv").config();
+const path = require("path");
+require("dotenv").config({ path: path.join(__dirname, ".env") });
 
 const app = express();
 
@@ -31,10 +32,12 @@ app.use("/api/sales", require("./routes/salesRoutes"));
 app.use("/api/payments", require("./routes/paymentRoutes"));
 app.use("/api/customers", require("./routes/customerRoutes"));
 app.use("/api/returns", require("./routes/returnRoutes"));
-app.use("/api/audit", require("./routes/auditRoutes"));
 app.use("/api/suppliers", require("./routes/supplierRoutes"));
 app.use("/api/settings", require("./routes/settingsRoutes"));
 app.use("/api/expenses", require("./routes/expenseRoutes"));
+app.use("/api/analytics", require("./routes/analyticsRoutes"));
+app.use("/api/purchase-orders", require("./routes/purchaseOrderRoutes"));
+app.use("/api/damaged-inventory", require("./routes/damagedInventoryRoutes"));
 
 /* ======================
    HEALTH CHECK

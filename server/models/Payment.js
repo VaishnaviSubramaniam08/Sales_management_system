@@ -12,7 +12,7 @@ const PaymentSchema = new mongoose.Schema({
     },
     method: {
         type: String,
-        enum: ["Cash", "UPI", "Card", "Wallet"],
+        enum: ["Cash", "UPI", "Card", "Wallet", "StoreCredit"],
         required: true,
     },
     transactionId: {

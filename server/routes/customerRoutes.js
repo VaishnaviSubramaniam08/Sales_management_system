@@ -1,6 +1,6 @@
 const express = require("express");
 const Customer = require("../models/Customer");
-const { protect } = require("../middleware/authMiddleware");
+const { protect, admin } = require("../middleware/authMiddleware");
 const router = express.Router();
 
 router.use(protect);
@@ -50,6 +50,61 @@ router.get("/:id", async (req, res) => {
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
+});
+
+/* ======================
+   BULK IMPORT (Detailed)
+   ====================== */
+router.post("/bulk-import", admin, async (req, res) => {
+  try {
+    const { items } = req.body;
+    if (!Array.isArray(items)) return res.status(400).json({ message: "Invalid input" });
+
+    let successCount = 0;
+    let failures = [];
+
+    for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        try {
+            const name = item.name?.trim();
+            const phone = item.phone?.toString().trim();
+
+            if (!name) throw new Error("Missing name");
+            if (!phone) throw new Error("Missing phone");
+
+            const exists = await Customer.findOne({ phone });
+            if (exists) throw new Error(`Customer with phone ${phone} already exists`);
+
+            const customer = new Customer({
+                name,
+                phone,
+                email: item.email?.trim() || ""
+            });
+
+            await customer.save();
+            successCount++;
+        } catch (err) {
+            failures.push({
+                row: i + 2,
+                name: item.name || "Unknown",
+                reason: err.message
+            });
+            console.error(`Customer import failed at row ${i+2}: ${err.message}`);
+        }
+    }
+
+    res.json({ 
+        message: `${successCount} customers imported successfully`,
+        details: {
+            total: items.length,
+            success: successCount,
+            failed: failures.length,
+            failures: failures
+        }
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;

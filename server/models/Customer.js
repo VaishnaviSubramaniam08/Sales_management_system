@@ -5,6 +5,7 @@ const customerSchema = new mongoose.Schema({
     phone: { type: String, required: true, unique: true },
     totalSpent: { type: Number, default: 0 },
     points: { type: Number, default: 0 },
+    storeCredit: { type: Number, default: 0 },
     visitCount: { type: Number, default: 0 },
     lastVisit: { type: Date, default: Date.now }
 });

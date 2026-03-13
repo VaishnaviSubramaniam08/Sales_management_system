@@ -29,8 +29,8 @@ router.use(protect);
    ====================== */
 router.post("/add", admin, upload.single("image"), async (req, res) => {
   try {
-    const { name, category, size, color, price, costPrice, quantity, barcode, reorderLevel, supplier } = req.body;
-    const image = req.file ? `/uploads/${req.file.filename}` : "";
+    const { name, category, size, color, price, costPrice, quantity, reorderLevel, supplier, image: imageUrl } = req.body;
+    const image = req.file ? `/uploads/${req.file.filename}` : (imageUrl || "");
 
     const cloth = new Clothes({
       name,
@@ -41,7 +41,6 @@ router.post("/add", admin, upload.single("image"), async (req, res) => {
       costPrice,
       quantity,
       image,
-      barcode,
       supplier: supplier || undefined,
       reorderLevel: reorderLevel ? Number(reorderLevel) : undefined,
     });
@@ -97,6 +96,8 @@ router.put("/:id", admin, upload.single("image"), async (req, res) => {
     let updateData = req.body;
     if (req.file) {
       updateData.image = `/uploads/${req.file.filename}`;
+    } else if (req.body.image) {
+      updateData.image = req.body.image;
     }
     if (typeof updateData.reorderLevel !== 'undefined') {
       updateData.reorderLevel = Number(updateData.reorderLevel);
@@ -142,14 +143,58 @@ router.get("/alerts/low-stock", async (req, res) => {
   }
 });
 
+
 /* ======================
-   SCAN BARCODE
+   BULK IMPORT (Detailed)
    ====================== */
-router.get("/barcode/:code", async (req, res) => {
+router.post("/bulk-import", admin, async (req, res) => {
   try {
-    const cloth = await Clothes.findOne({ barcode: req.params.code });
-    if (!cloth) return res.status(404).json({ message: "Product not found" });
-    res.json(cloth);
+    const { items } = req.body;
+    if (!Array.isArray(items)) return res.status(400).json({ message: "Invalid input" });
+
+    let successCount = 0;
+    let failures = [];
+
+    for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        try {
+            // Mapping & Validation
+            const name = item.name?.trim();
+            if (!name) throw new Error("Missing name");
+
+
+            const cloth = new Clothes({
+                name,
+                category: item.category?.trim() || "Uncategorized",
+                size: item.size?.trim() || "Standard",
+                color: item.color?.trim() || "N/A",
+                price: Number(item.price) || 0,
+                costPrice: Number(item.costPrice || item.costprice) || 0,
+                quantity: Number(item.quantity) || 0,
+                supplier: item.supplier || undefined
+            });
+
+            await cloth.save();
+            successCount++;
+        } catch (err) {
+            failures.push({
+                row: i + 2, // 1 for header, 1 for 0-index
+                name: item.name || "Unknown",
+                reason: err.message
+            });
+            console.error(`Import failed at row ${i+2}: ${err.message}`);
+        }
+    }
+
+    res.json({ 
+        message: `${successCount} clothes imported successfully`,
+        details: {
+            total: items.length,
+            success: successCount,
+            failed: failures.length,
+            failures: failures
+        }
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

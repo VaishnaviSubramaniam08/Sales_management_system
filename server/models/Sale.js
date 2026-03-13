@@ -1,10 +1,12 @@
 const mongoose = require("mongoose");
 
 const saleSchema = new mongoose.Schema({
+  salesId: { type: String, unique: true },
   items: [
     {
       clothId: { type: mongoose.Schema.Types.ObjectId, ref: "Clothes" },
       quantity: Number,
+      bundles: { type: Number, default: 0 },
       price: Number,
       costPrice: Number,
     },
@@ -16,6 +18,7 @@ const saleSchema = new mongoose.Schema({
     type: { type: String },
     amount: { type: Number, default: 0 }
   },
+  pointsRedeemed: { type: Number, default: 0 },
   taxDetails: {
     rate: { type: Number, default: 0 },
     amount: { type: Number, default: 0 }
@@ -31,6 +34,8 @@ const saleSchema = new mongoose.Schema({
     enum: ["Paid", "Pending", "Failed"],
     default: "Pending",
   },
+  vehicleNo: String,
+  movementFor: String,
   date: { type: Date, default: Date.now },
 });
 

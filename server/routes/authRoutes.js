@@ -4,7 +4,6 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const { protect, admin } = require("../middleware/authMiddleware");
 const sendEmail = require("../utils/sendEmail");
-const AuditLog = require("../models/AuditLog");
 const express = require("express");
 const router = express.Router();
 
@@ -33,7 +32,7 @@ router.post("/register", async (req, res) => {
       phone,
       password: hashedPassword,
       role: role || "staff",
-      status: userCount === 0 ? "approved" : "pending" 
+      status: userCount === 0 ? "approved" : "active" 
     });
 
     await user.save();
@@ -76,15 +75,13 @@ router.delete("/users/:id", protect, admin, async (req, res) => {
     const user = await User.findById(targetId).select("-password");
     if (!user) return res.status(404).json({ message: "User not found" });
 
+    const Sale = require("../models/Sale");
+    const saleCount = await Sale.countDocuments({ soldBy: targetId });
+    if (saleCount > 0) {
+      return res.status(400).json({ message: "Cannot delete staff with existing sales records. Deactivate them instead." });
+    }
+
     await User.findByIdAndDelete(targetId);
-    await AuditLog.create({
-      action: "USER_DELETE",
-      user: req.user.id,
-      role: "admin",
-      entityType: "User",
-      entityId: String(targetId),
-      metadata: { email: user.email, name: user.name, role: user.role }
-    });
 
     res.json({ message: "User deleted" });
   } catch (err) {
@@ -113,7 +110,6 @@ router.put("/users/:id/role", protect, admin, async (req, res) => {
     if (!['admin','staff'].includes(role)) return res.status(400).json({ message: 'Invalid role' });
     const user = await User.findByIdAndUpdate(req.params.id, { role }, { new: true }).select("-password");
     if (!user) return res.status(404).json({ message: 'User not found' });
-    await AuditLog.create({ action: 'USER_ROLE_UPDATE', user: req.user.id, role: 'admin', entityType: 'User', entityId: String(user._id), metadata: { newRole: role } });
     res.json(user);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -125,12 +121,33 @@ router.put("/users/:id/role", protect, admin, async (req, res) => {
    ========================= */
 router.put("/users/:id/status", protect, admin, async (req, res) => {
   try {
-    const { status } = req.body; // 'approved' | 'deactivated'
-    if (!['approved','deactivated','rejected','pending'].includes(status)) return res.status(400).json({ message: 'Invalid status' });
-    const user = await User.findByIdAndUpdate(req.params.id, { status }, { new: true }).select("-password");
+    const { status } = req.body;
+    if (!status) {
+      return res.status(400).json({ message: "Status is required" });
+    }
+    const update = { status };
+    if (status === "inactive" || status === "deactivated") {
+      update.exitDate = Date.now();
+    } else {
+      update.exitDate = null;
+    }
+    const user = await User.findByIdAndUpdate(req.params.id, update, { new: true }).select("-password");
     if (!user) return res.status(404).json({ message: 'User not found' });
-    await AuditLog.create({ action: 'USER_STATUS_UPDATE', user: req.user.id, role: 'admin', entityType: 'User', entityId: String(user._id), metadata: { newStatus: status } });
     res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.put("/users/:id/deactivate", protect, admin, async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.params.id, 
+      { status: "inactive", exitDate: Date.now() }, 
+      { new: true }
+    ).select("-password");
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json({ message: "Staff deactivated", user });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -144,7 +161,6 @@ router.put("/users/:id", protect, admin, async (req, res) => {
     const { name, phone } = req.body;
     const user = await User.findByIdAndUpdate(req.params.id, { name, phone }, { new: true }).select("-password");
     if (!user) return res.status(404).json({ message: 'User not found' });
-    await AuditLog.create({ action: 'USER_UPDATE', user: req.user.id, role: 'admin', entityType: 'User', entityId: String(user._id) });
     res.json(user);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -162,7 +178,6 @@ router.post("/users", protect, admin, async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = new User({ name, email, phone, password: hashedPassword, role, status: 'approved' });
     await user.save();
-    await AuditLog.create({ action: 'USER_CREATE', user: req.user.id, role: 'admin', entityType: 'User', entityId: String(user._id) });
     res.status(201).json({ message: 'User created', id: user._id });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -179,14 +194,12 @@ router.post("/login", async (req, res) => {
     // Check user
     const user = await User.findOne({ email });
     if (!user) {
-      await AuditLog.create({ action: "LOGIN_FAIL", metadata: { email, reason: "not_found" } });
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
     // Compare password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      await AuditLog.create({ action: "LOGIN_FAIL", user: user._id, role: user.role, metadata: { reason: "bad_password" } });
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
@@ -198,9 +211,27 @@ router.post("/login", async (req, res) => {
       if (user.status === "rejected") {
         return res.status(403).json({ message: "Your registration request was rejected." });
       }
-      if (user.status === "deactivated") {
-        return res.status(403).json({ message: "Your account is deactivated. Contact administrator." });
+      if (user.status === "inactive" || user.status === "deactivated") {
+        return res.status(403).json({ message: "Your account has been deactivated. Contact admin." });
       }
+    }
+
+    // 2FA Check
+    if (user.twoFactorEnabled) {
+      // Generate a temporary 2FA token or code
+      const tempToken = jwt.sign(
+        { id: user._id, role: user.role, is2FA: true },
+        process.env.JWT_SECRET,
+        { expiresIn: "5m" }
+      );
+      // In a real app, sendEmail(user.email, "Your 2FA Code", "123456")
+      console.log(`[2FA DEBUG] Code for ${user.email}: 123456`);
+      
+      return res.json({
+        require2FA: true,
+        tempToken,
+        message: "Please enter the 2FA code sent to your email (Demo: 123456)"
+      });
     }
 
     // Generate token
@@ -220,9 +251,55 @@ router.post("/login", async (req, res) => {
       }
     };
 
-    await AuditLog.create({ action: "LOGIN_SUCCESS", user: user._id, role: user.role });
 
     res.json(response);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* =========================
+   VERIFY 2FA
+   ========================= */
+router.post("/verify-2fa", async (req, res) => {
+  try {
+    const { tempToken, code } = req.body;
+    const decoded = jwt.verify(tempToken, process.env.JWT_SECRET);
+    if (!decoded.is2FA) return res.status(401).json({ message: "Invalid token type" });
+
+    if (code !== "123456") {
+      return res.status(401).json({ message: "Invalid 2FA code" });
+    }
+
+    const user = await User.findById(decoded.id);
+    const finalToken = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
+
+    res.json({
+      token: finalToken,
+      user: { id: user._id, name: user.name, email: user.email, role: user.role }
+    });
+  } catch (err) {
+    res.status(401).json({ message: "2FA session expired or invalid" });
+  }
+});
+
+/* =========================
+   TOGGLE 2FA
+   ========================= */
+router.put("/toggle-2fa", protect, async (req, res) => {
+  try {
+    const { enabled } = req.body;
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    user.twoFactorEnabled = enabled;
+    await user.save();
+
+    res.json({ message: `2FA ${enabled ? 'enabled' : 'disabled'} successfully`, twoFactorEnabled: user.twoFactorEnabled });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
