@@ -23,6 +23,10 @@ import ExpenseTracker from "./pages/admin/ExpenseTracker";
 import ProfitLossReport from "./pages/admin/ProfitLossReport";
 import Reports from "./pages/Reports";
 import Returns from "./pages/Returns";
+import SandboxCheckout from "./pages/SandboxCheckout";
+import PurchaseOrderManagement from "./pages/admin/PurchaseOrderManagement";
+import BulkImport from "./pages/admin/BulkImport";
+import DamagedStockReport from "./pages/admin/DamagedStockReport";
 import PrivateRoute from "./PrivateRoute";
 
 function App() {
@@ -59,9 +63,12 @@ function App() {
           <Route path="review-staff" element={<ReviewStaff />} />
           <Route path="suppliers" element={<SupplierManagement />} />
           <Route path="settings" element={<GeneralSettings />} />
-          <Route path="expenses" element={<ExpenseTracker />} />
-          <Route path="profit-loss" element={<ProfitLossReport />} />
-          <Route path="edit/:id" element={<EditClothes />} />
+           <Route path="expenses" element={<ExpenseTracker />} />
+           <Route path="profit-loss" element={<ProfitLossReport />} />
+           <Route path="purchase-orders" element={<PurchaseOrderManagement />} />
+           <Route path="bulk-import" element={<BulkImport />} />
+           <Route path="edit/:id" element={<EditClothes />} />
+           <Route path="damaged-stock" element={<DamagedStockReport />} />
         </Route>
         <Route
           path="/add-staff"
@@ -155,6 +162,7 @@ function App() {
           <Route index element={<InventoryContent />} />
           <Route path="sales" element={<Sales />} />
           <Route path="returns" element={<Returns />} />
+          <Route path="checkout" element={<SandboxCheckout />} />
         </Route>
 
         <Route
@@ -162,6 +170,15 @@ function App() {
           element={
             <PrivateRoute>
               <Sales />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/checkout"
+          element={
+            <PrivateRoute>
+              <SandboxCheckout />
             </PrivateRoute>
           }
         />

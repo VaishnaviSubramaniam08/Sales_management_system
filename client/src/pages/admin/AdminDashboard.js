@@ -1,9 +1,11 @@
 import { Link, useNavigate, Outlet, useLocation } from "react-router-dom";
 import BackButton from "../../components/BackButton";
+import { useTheme } from "../../context/ThemeContext";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { theme, toggleTheme } = useTheme();
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -101,11 +103,15 @@ export default function AdminDashboard() {
             { label: "Returns", path: "/admin/returns" },
             { label: "Add Clothes", path: "/admin/add" },
             { label: "Reports", path: "/admin/reports" },
+            { label: "Purchase Orders", path: "/admin/purchase-orders" },
+            { label: "Supplier Management", path: "/admin/suppliers" },
+            { label: "Bulk Import", path: "/admin/bulk-import" },
             { label: "Transactions", path: "/admin/transactions" },
             { label: "Staff Management", path: "/admin/staff" },
             { label: "Sales Oversight", path: "/admin/sales-oversight" },
-
             { label: "Review Staff", path: "/admin/review-staff" },
+            { label: "General Settings", path: "/admin/settings" },
+            { label: "Damaged Stock", path: "/admin/damaged-stock" },
           ].map(btn => (
             <Link
               key={btn.path}
@@ -125,6 +131,22 @@ export default function AdminDashboard() {
           onClick={handleLogout}
         >
           Logout
+        </button>
+
+        <button 
+          onClick={toggleTheme}
+          style={{ 
+            marginTop: "10px", 
+            padding: "10px", 
+            borderRadius: "6px", 
+            border: "none", 
+            cursor: "pointer",
+            background: theme === 'light' ? '#333' : '#eee',
+            color: theme === 'light' ? '#fff' : '#000',
+            fontWeight: 'bold'
+          }}
+        >
+          {theme === 'light' ? '🌙 Dark Mode' : '☀️ Light Mode'}
         </button>
       </div>
 

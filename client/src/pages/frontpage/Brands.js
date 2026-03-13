@@ -1,4 +1,3 @@
-import { Link } from "react-router-dom";
 import "./Pages.css";
 import Navbar from "./Navbar";
 import heroImg from "../../assets/Ordinaree-39.webp";

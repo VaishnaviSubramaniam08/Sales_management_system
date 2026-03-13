@@ -95,10 +95,10 @@ export default function SalesOversight() {
       if (range.to) params.to = range.to;
 
       const [salesRes, staffRes, dailyRes, discRes] = await Promise.all([
-        api.get("/sales", { params }),
-        api.get("/sales/metrics/staff", { params }),
-        api.get("/sales/daily-summary", { params }),
-        api.get("/sales/discounts", { params }),
+        api.get("sales", { params }),
+        api.get("sales/metrics/staff", { params }),
+        api.get("sales/daily-summary", { params }),
+        api.get("sales/discounts", { params }),
       ]);
 
       setSales(salesRes.data);

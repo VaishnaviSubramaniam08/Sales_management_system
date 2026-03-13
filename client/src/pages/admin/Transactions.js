@@ -6,7 +6,7 @@ export default function Transactions() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        api.get("/payments")
+        api.get("payments")
             .then(res => {
                 setPayments(res.data);
                 setLoading(false);

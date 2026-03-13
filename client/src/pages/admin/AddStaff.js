@@ -17,7 +17,7 @@ export default function AddStaff() {
     }
 
     try {
-      await api.post("/auth/register", {
+      await api.post("auth/register", {
         ...form,
         role: "staff",
       });

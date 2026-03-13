@@ -10,8 +10,8 @@ export default function AdminSummary() {
   const [lowStock, setLowStock] = useState([]);
 
   useEffect(() => {
-    api.get("/sales/dashboard").then(res => setSummary(res.data));
-    api.get("/clothes/alerts/low-stock?threshold=5").then(res => setLowStock(res.data));
+    api.get("sales/dashboard").then(res => setSummary(res.data));
+    api.get("clothes/alerts/low-stock?threshold=5").then(res => setLowStock(res.data));
   }, []);
 
   const colors = {

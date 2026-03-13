@@ -2,6 +2,14 @@ import { useState, useEffect } from "react";
 import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
 
+const RETURN_REASONS = [
+    "Defective / Damaged",
+    "Size Issue",
+    "Color Change",
+    "Customer Changed Mind",
+    "Wrong Product Delivered"
+];
+
 export default function Returns() {
     const navigate = useNavigate();
     const [saleId, setSaleId] = useState("");
@@ -19,7 +27,7 @@ export default function Returns() {
     }, []);
 
     const fetchHistory = () => {
-        api.get("/returns").then(res => setReturnsHistory(res.data)).catch(err => console.error(err));
+        api.get("returns").then(res => setReturnsHistory(res.data)).catch(err => console.error(err));
     };
 
     const fetchSale = async () => {
@@ -30,7 +38,7 @@ export default function Returns() {
         setReturnItems({});
 
         try {
-            const res = await api.get(`/sales/${saleId}`);
+            const res = await api.get(`sales/${saleId}`);
             setSale(res.data);
         } catch (err) {
             setError("Sale not found");
@@ -40,7 +48,7 @@ export default function Returns() {
     const handleCheckItem = (clothId, checked) => {
         setReturnItems(prev => {
             if (checked) {
-                return { ...prev, [clothId]: { qty: 1, reason: "Defective" } };
+                return { ...prev, [clothId]: { qty: 1, reason: "" } }; // empty reason by default — staff MUST select
             } else {
                 const copy = { ...prev };
                 delete copy[clothId];
@@ -77,7 +85,6 @@ export default function Returns() {
     };
 
     const handleSubmitReturn = async () => {
-        const refundAmount = calculateRefund();
         const items = Object.keys(returnItems).map(clothId => ({
             clothId,
             quantity: returnItems[clothId].qty,
@@ -89,8 +96,17 @@ export default function Returns() {
             return;
         }
 
+        // Validate that every selected item has a reason selected
+        const missingReason = items.find(i => !i.reason);
+        if (missingReason) {
+            setError("Please select a Return Reason for every item.");
+            return;
+        }
+
+        const refundAmount = calculateRefund();
+
         try {
-            await api.post("/returns/add", {
+            await api.post("returns/add", {
                 saleId: sale._id,
                 items,
                 refundAmount
@@ -142,13 +158,40 @@ export default function Returns() {
 
             {sale && (
                 <div style={styles.saleBox}>
-                    <h3>Sale #{sale._id.slice(-6)}</h3>
-                    <p>Date: {new Date(sale.date).toLocaleString()} | Original Total: ₹{sale.totalAmount}</p>
-                    <p>Status: <b>{sale.status}</b></p>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                        <div>
+                            <h3 style={{ margin: "0 0 10px 0" }}>Sale #{sale.salesId || sale._id.slice(-6)}</h3>
+                            <p style={{ margin: "5px 0" }}>Date: {new Date(sale.date).toLocaleString()} | Original Total: ₹{sale.totalAmount}</p>
+                            <p style={{ margin: "5px 0" }}>Status: <b>{sale.status}</b></p>
+                        </div>
+                        {sale.returnEligibility && (
+                            <div style={{ 
+                                padding: "8px 15px", 
+                                borderRadius: "20px", 
+                                fontWeight: "bold",
+                                background: sale.returnEligibility.isExpired ? "#fde8e8" : "#def7ec",
+                                color: sale.returnEligibility.isExpired ? "#c81e1e" : "#03543f",
+                                border: `1px solid ${sale.returnEligibility.isExpired ? "#f98080" : "#31c48d"}`
+                            }}>
+                                {sale.returnEligibility.isExpired ? "🚫 Return Expired" : "✅ Return Eligible"}
+                                <div style={{ fontSize: "11px", fontWeight: "normal", marginTop: "4px", textAlign: "center" }}>
+                                    Expiry: {new Date(sale.returnEligibility.expiryDate).toLocaleDateString()}
+                                </div>
+                            </div>
+                        )}
+                    </div>
 
                     <div style={{ marginTop: "15px" }}>
                         <h4>Select Items to Return:</h4>
-                        {sale.items.map(item => (
+                        <div style={{ padding: "10px 14px", background: "#fff8e1", border: "1px solid #f59e0b", borderRadius: "8px", marginBottom: "12px", fontSize: "13px", color: "#92400e" }}>
+                            ⚠️ <b>Note:</b> Defective items will <b>NOT</b> be added back to inventory. They will be logged in Damaged Stock.
+                        </div>
+                         {sale.returnEligibility?.isExpired ? (
+                            <p style={{ color: "#d32f2f", fontStyle: "italic" }}>
+                                Refund not possible. The 10-day return period has expired.
+                            </p>
+                        ) : (
+                            sale.items.map(item => (
                             <div key={item.clothId._id} style={styles.itemRow}>
                                 <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
                                     <input
@@ -172,25 +215,31 @@ export default function Returns() {
                                         <select
                                             value={returnItems[item.clothId._id].reason}
                                             onChange={e => handleReasonChange(item.clothId._id, e.target.value)}
-                                            style={{ padding: "5px" }}
+                                            style={{ padding: "7px", borderRadius: "6px", border: `1px solid ${!returnItems[item.clothId._id].reason ? "#f87171" : "#ddd"}` }}
                                         >
-                                            <option value="Defective">Defective</option>
-                                            <option value="Size Issue">Size Issue</option>
-                                            <option value="Changed Mind">Changed Mind</option>
+                                            <option value="">-- Select Reason (Required) --</option>
+                                            {RETURN_REASONS.map(r => (
+                                                <option key={r} value={r}>{r}</option>
+                                            ))}
                                         </select>
+                                        {!returnItems[item.clothId._id].reason && (
+                                            <span style={{ fontSize: "11px", color: "#c81e1e" }}>Required</span>
+                                        )}
                                     </div>
                                 )}
                                 <div>₹{item.price}</div>
                             </div>
-                        ))}
+                        )))}
                     </div>
 
-                    <div style={{ marginTop: "20px", textAlign: "right" }}>
-                        <h3>Refund: ₹{calculateRefund()}</h3>
-                        <button onClick={handleSubmitReturn} style={{ ...styles.btn, background: "#d32f2f" }}>
-                            Confirm Return
-                        </button>
-                    </div>
+                    {!sale.returnEligibility?.isExpired && (
+                        <div style={{ marginTop: "20px", textAlign: "right" }}>
+                            <h3>Refund: ₹{calculateRefund()}</h3>
+                            <button onClick={handleSubmitReturn} style={{ ...styles.btn, background: "#d32f2f" }}>
+                                Confirm Return
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -202,19 +251,36 @@ export default function Returns() {
                         <th style={styles.th}>Sale ID</th>
                         <th style={styles.th}>Items</th>
                         <th style={styles.th}>Refund</th>
+                        <th style={styles.th}>Status & Staff</th>
                     </tr>
                 </thead>
                 <tbody>
                     {returnsHistory.map(ret => (
-                        <tr key={ret._id}>
+                        <tr key={ret._id} style={{ background: ret.expirationAttempt ? "#fff5f5" : "inherit" }}>
                             <td style={styles.td}>{new Date(ret.date).toLocaleDateString()}</td>
-                            <td style={styles.td}>{ret.saleId ? ret.saleId._id.slice(-6) : "N/A"}</td>
+                            <td style={styles.td}>{ret.saleId ? (ret.saleId.salesId || ret.saleId._id.slice(-6)) : "N/A"}</td>
                             <td style={styles.td}>
-                                {ret.items.map(i => (
-                                    <div key={i._id}>{i.clothId ? i.clothId.name : "Item"} (x{i.quantity}) - {i.reason}</div>
-                                ))}
+                                {ret.expirationAttempt ? (
+                                    <span style={{ color: "#d32f2f", fontStyle: "italic" }}>Blocked Expired Attempt</span>
+                                ) : (
+                                    ret.items.map(i => (
+                                        <div key={i._id}>{i.clothId ? i.clothId.name : "Item"} (x{i.quantity}) - {i.reason}</div>
+                                    ))
+                                )}
                             </td>
                             <td style={styles.td}>₹{ret.refundAmount}</td>
+                            <td style={styles.td}>
+                                <span style={{
+                                    padding: "4px 8px", borderRadius: "12px", fontSize: "12px",
+                                    background: ret.approvalStatus === 'approved' ? '#d4edda' : ret.approvalStatus === 'rejected' ? '#f8d7da' : '#fff3cd',
+                                    color: ret.approvalStatus === 'approved' ? '#155724' : ret.approvalStatus === 'rejected' ? '#721c24' : '#856404'
+                                }}>
+                                    {ret.approvalStatus.toUpperCase()}
+                                </span>
+                                <div style={{ fontSize: "11px", color: "#666", marginTop: "4px" }}>
+                                    By: {ret.staffId ? ret.staffId.name : (ret.approvedBy ? "Admin" : "System")}
+                                </div>
+                            </td>
                         </tr>
                     ))}
                 </tbody>

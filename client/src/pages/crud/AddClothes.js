@@ -5,29 +5,8 @@ import { useNavigate } from "react-router-dom";
 export default function AddClothes() {
   const navigate = useNavigate();
   const [suppliers, setSuppliers] = useState([]);
-
-  useEffect(() => {
-    const fetchSuppliers = async () => {
-      try {
-        const res = await api.get("/suppliers");
-        setSuppliers(res.data);
-      } catch (err) {
-        console.error("Failed to fetch suppliers");
-      }
-    };
-    fetchSuppliers();
-  }, []);
-
-  const fields = [
-    { name: "name", placeholder: "Name" },
-    { name: "category", placeholder: "Category" },
-    { name: "size", placeholder: "Size" },
-    { name: "color", placeholder: "Color" },
-    { name: "price", placeholder: "Selling Price", type: "number" },
-    { name: "costPrice", placeholder: "Cost Price (Buying Price)", type: "number" },
-    { name: "quantity", placeholder: "Quantity", type: "number" },
-    { name: "barcode", placeholder: "Barcode (Scan or Type)" },
-  ];
+  const [errors, setErrors] = useState({});
+  const [success, setSuccess] = useState("");
 
   const [form, setForm] = useState({
     name: "",
@@ -37,80 +16,69 @@ export default function AddClothes() {
     price: "",
     costPrice: "",
     quantity: "",
-    barcode: "",
     supplier: "",
-    image: null,
+    image: "",
   });
 
-  const generateBarcode = () => {
-    // Generate a simple numeric barcode based on timestamp and random number
-    const code = "CLO-" + Date.now().toString().slice(-8) + Math.floor(Math.random() * 100);
-    setForm({ ...form, barcode: code });
+  useEffect(() => {
+    const fetchSuppliers = async () => {
+      try {
+        const res = await api.get("suppliers");
+        setSuppliers(res.data);
+      } catch (err) {
+        console.error("Failed to fetch suppliers");
+      }
+    };
+    fetchSuppliers();
+  }, []);
+
+  const profit = form.price && form.costPrice ? (Number(form.price) - Number(form.costPrice)).toFixed(2) : 0;
+
+  const validate = () => {
+    let newErrors = {};
+    if (!form.name) newErrors.name = "Name is required";
+    if (!form.category) newErrors.category = "Category is required";
+    if (!form.size) newErrors.size = "Size is required";
+    if (!form.color) newErrors.color = "Color is required";
+    if (!form.price || Number(form.price) <= 0) newErrors.price = "Selling Price must be > 0";
+    if (!form.costPrice || Number(form.costPrice) <= 0) newErrors.costPrice = "Cost Price must be > 0";
+    if (!form.quantity || Number(form.quantity) <= 0) newErrors.quantity = "Quantity must be > 0";
+    if (!form.supplier) newErrors.supplier = "Supplier is required";
+    if (!form.image) newErrors.image = "Image URL is required";
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setForm({ ...form, [name]: value });
+    if (errors[name]) {
+      setErrors({ ...errors, [name]: "" });
+    }
+  };
+
 
   const handleSubmit = async () => {
-    setError("");
-    setSuccess("");
-
-    const requiredFields = ["name", "category", "size", "color", "price", "costPrice", "quantity"];
-    const missing = requiredFields.filter(field => !form[field]);
-
-    if (missing.length > 0) {
-      setError(`Missing required fields: ${missing.join(", ")}`);
-      return;
-    }
-
-    if (Number(form.price) <= 0 || Number(form.costPrice) < 0 || Number(form.quantity) <= 0) {
-      setError("Price, Cost Price and Quantity must be valid numbers");
-      return;
-    }
-
-    let finalBarcode = form.barcode;
-    if (!finalBarcode) {
-      finalBarcode = "CLO-" + Date.now().toString().slice(-8) + Math.floor(Math.random() * 100);
-    }
-
-    const formData = new FormData();
-    Object.keys(form).forEach(key => {
-      if (key === "barcode") {
-        formData.append(key, finalBarcode);
-      } else if (form[key] !== null) {
-        formData.append(key, form[key]);
-      }
-    });
+    if (!validate()) return;
 
     try {
-      await api.post("/clothes/add", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-
-      setSuccess("Clothes added successfully!");
-
+      await api.post("clothes/add", form);
+      setSuccess("Cloth Added Successfully!");
       setForm({
-        name: "",
-        category: "",
-        size: "",
-        color: "",
-        price: "",
-        costPrice: "",
-        quantity: "",
-        barcode: "",
-        supplier: "",
-        image: null,
+        name: "", category: "", size: "", color: "",
+        price: "", costPrice: "", quantity: "",
+        supplier: "", image: "",
       });
-
       setTimeout(() => {
+        setSuccess("");
         navigate("/admin/inventory");
       }, 1000);
     } catch (err) {
-      setError("Failed to add clothes");
+      setErrors({ server: "Failed to add cloth" });
     }
   };
 
-  // ====== Inline Styles ======
   const styles = {
     container: {
       maxWidth: "550px",
@@ -151,38 +119,10 @@ export default function AddClothes() {
       marginTop: "12px",
       fontWeight: "500",
     },
-    backButton: {
-      position: "absolute",
-      top: "20px",
-      left: "20px",
-      padding: "10px 16px",
-      background: "#ccc",
-      color: "#333",
-      border: "none",
-      borderRadius: "10px",
-      fontSize: "14px",
-      cursor: "pointer",
-      fontWeight: "500",
-    },
-    error: {
-      color: "#ff3b3b",
-      textAlign: "center",
-      marginBottom: "14px",
-      fontWeight: "500",
-    },
-    success: {
-      color: "#2a8a2a",
-      textAlign: "center",
-      marginBottom: "14px",
-      fontWeight: "500",
-    },
-    label: {
-      display: "block",
-      marginBottom: "6px",
-      color: "#666",
-      fontSize: "14px",
-      fontWeight: "500",
-    },
+    error: { color: "#ff3b3b", textAlign: "center", marginBottom: "14px", fontWeight: "500", fontSize: '13px' },
+    success: { color: "#2a8a2a", textAlign: "center", marginBottom: "14px", fontWeight: "500" },
+    label: { display: "block", marginBottom: "6px", color: "#666", fontSize: "14px", fontWeight: "500" },
+    fieldGroup: { marginBottom: '16px', position: 'relative' }
   };
 
   return (
@@ -190,69 +130,93 @@ export default function AddClothes() {
       <div style={styles.container}>
         <h2 style={styles.title}>Add Clothes</h2>
 
-        {error && <p style={styles.error}>{error}</p>}
         {success && <p style={styles.success}>{success}</p>}
+        {errors.server && <p style={styles.error}>{errors.server}</p>}
 
-        {fields.map((field) => (
-          <div key={field.name} style={{ position: 'relative' }}>
-            <input
-              placeholder={field.placeholder}
-              value={form[field.name]}
-              type={field.type || "text"}
-              onChange={(e) =>
-                setForm({ ...form, [field.name]: e.target.value })
-              }
-              style={styles.input}
+        <div style={styles.fieldGroup}>
+          <label style={styles.label}>Name</label>
+          <input name="name" value={form.name} onChange={handleInputChange} placeholder="Name" style={styles.input} />
+          {errors.name && <span style={styles.error}>{errors.name}</span>}
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <label style={styles.label}>Category</label>
+            <input 
+              name="category" 
+              value={form.category} 
+              onChange={handleInputChange} 
+              placeholder="e.g. Shirt, Pant" 
+              style={styles.input} 
             />
-            {field.name === "barcode" && (
-              <button 
-                onClick={generateBarcode}
-                style={{
-                  position: 'absolute',
-                  right: '10px',
-                  top: '10px',
-                  padding: '6px 10px',
-                  background: '#333',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '12px',
-                  cursor: 'pointer'
-                }}
-              >
-                Generate
-              </button>
-            )}
+            {errors.category && <span style={styles.error}>{errors.category}</span>}
           </div>
-        ))}
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <label style={styles.label}>Size</label>
+            <input 
+              name="size" 
+              value={form.size} 
+              onChange={handleInputChange} 
+              placeholder="e.g. S, M, L, XL" 
+              style={styles.input} 
+            />
+            {errors.size && <span style={styles.error}>{errors.size}</span>}
+          </div>
+        </div>
 
-        <div style={{ marginBottom: "16px" }}>
+        <div style={styles.fieldGroup}>
+          <label style={styles.label}>Color</label>
+          <input name="color" value={form.color} onChange={handleInputChange} placeholder="Color" style={styles.input} />
+          {errors.color && <span style={styles.error}>{errors.color}</span>}
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <label style={styles.label}>Selling Price</label>
+            <input name="price" type="number" value={form.price} onChange={handleInputChange} placeholder="Price" style={styles.input} />
+            {errors.price && <span style={styles.error}>{errors.price}</span>}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <label style={styles.label}>Cost Price</label>
+            <input name="costPrice" type="number" value={form.costPrice} onChange={handleInputChange} placeholder="Cost Price" style={styles.input} />
+            {errors.costPrice && <span style={styles.error}>{errors.costPrice}</span>}
+          </div>
+        </div>
+
+        <div style={{ padding: '12px 16px', background: '#fff', borderRadius: '10px', marginBottom: '20px', fontSize: '15px', border: '1px solid #d4cbbd', color: '#3a2b1b', fontWeight: '600' }}>
+          Calculated Profit: <span style={{ color: Number(profit) >= 0 ? '#2a8a2a' : '#ff3b3b' }}>₹{profit}</span>
+        </div>
+
+        <div style={styles.fieldGroup}>
+          <label style={styles.label}>Quantity</label>
+          <input name="quantity" type="number" value={form.quantity} onChange={handleInputChange} placeholder="Quantity" style={styles.input} />
+          {errors.quantity && <span style={styles.error}>{errors.quantity}</span>}
+        </div>
+
+
+        <div style={styles.fieldGroup}>
           <label style={styles.label}>Supplier</label>
-          <select
-            value={form.supplier}
-            onChange={(e) => setForm({ ...form, supplier: e.target.value })}
-            style={styles.input}
-          >
+          <select name="supplier" value={form.supplier} onChange={handleInputChange} style={styles.input}>
             <option value="">Select Supplier</option>
             {suppliers.map(s => (
               <option key={s._id} value={s._id}>{s.name}</option>
             ))}
           </select>
+          {errors.supplier && <span style={styles.error}>{errors.supplier}</span>}
         </div>
 
-        <div style={{ marginBottom: "16px" }}>
-          <label style={styles.label}>Upload Image</label>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => setForm({ ...form, image: e.target.files[0] })}
-            style={styles.input}
-          />
+        <div style={styles.fieldGroup}>
+          <label style={styles.label}>Image URL</label>
+          <input name="image" value={form.image} onChange={handleInputChange} placeholder="Image URL" style={styles.input} />
+          {errors.image && <span style={styles.error}>{errors.image}</span>}
+          {form.image && (
+            <div style={{ marginTop: '10px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #d4cbbd' }}>
+              <img src={form.image} alt="Preview" style={{ width: '100%', display: 'block' }} onError={(e) => e.target.style.display='none'} />
+            </div>
+          )}
         </div>
 
-        <button onClick={handleSubmit} style={styles.button}>
-          Add
-        </button>
+        <button onClick={handleSubmit} style={{ ...styles.button, background: '#5d4037' }}>Add Clothes</button>
       </div>
     </div>
   );

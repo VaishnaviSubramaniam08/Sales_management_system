@@ -30,7 +30,7 @@ export default function Register() {
     }
 
     try {
-      await api.post("/auth/register", form);
+      await api.post("auth/register", form);
 
       alert("✅ Registration submitted. Awaiting Admin approval.");
       navigate("/");

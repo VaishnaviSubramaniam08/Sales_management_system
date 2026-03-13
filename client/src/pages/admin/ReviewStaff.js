@@ -12,7 +12,7 @@ export default function ReviewStaff() {
 
   const fetchPendingUsers = async () => {
     try {
-      const response = await api.get("/auth/pending");
+      const response = await api.get("auth/pending");
       setPendingUsers(response.data);
       setLoading(false);
     } catch (err) {
@@ -23,7 +23,7 @@ export default function ReviewStaff() {
 
   const handleAction = async (id, status) => {
     try {
-      await api.put(`/auth/approve/${id}`, { status });
+      await api.put(`auth/approve/${id}`, { status });
       alert(`User ${status} successfully`);
       fetchPendingUsers();
     } catch (err) {

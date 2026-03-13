@@ -1,8 +1,10 @@
-import React, { useState } from "react";
-import api from "../api/axios";
+import React, { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
-export default function PaymentModal({ sale, cart = [], subtotal = 0, taxAmount = 0, customer = null, onClose, onPaymentSuccess }) {
-  const finalTotal = sale.totalAmount;
+export default function SandboxCheckout() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { cart = [], total = 0, gst = 0, finalTotal = 0, customer = null } = location.state || {};
 
   const [paymentMethod, setPaymentMethod] = useState("upi");
   const [processing, setProcessing] = useState(false);
@@ -12,7 +14,6 @@ export default function PaymentModal({ sale, cart = [], subtotal = 0, taxAmount 
   const [expiry, setExpiry] = useState("");
   const [cvv, setCvv] = useState("");
   const [cardName, setCardName] = useState("");
-  const [transactionId, setTransactionId] = useState("");
 
   const stages = [
     "Contacting Bank...",
@@ -20,7 +21,14 @@ export default function PaymentModal({ sale, cart = [], subtotal = 0, taxAmount 
     "Completing Transaction..."
   ];
 
-  const handlePayment = async () => {
+  useEffect(() => {
+    if (!total || total === 0) {
+      // Uncomment this for real usage:
+      // navigate("/sales");
+    }
+  }, [total, navigate]);
+
+  const handlePayment = () => {
     setProcessing(true);
     setProcessStage(0);
 
@@ -32,58 +40,32 @@ export default function PaymentModal({ sale, cart = [], subtotal = 0, taxAmount 
       });
     }, 1000);
 
-    setTimeout(async () => {
+    setTimeout(() => {
       const isFailure = paymentMethod === "card" && cardNumber.endsWith("000");
-      if (isFailure) {
-        setResult("failure");
-        setProcessing(false);
-        return;
-      }
-
-      // If success, call backend to actually process it
-      try {
-        const txnId = `TXN_${Math.floor(Math.random() * 100000000)}`;
-        // For UPI or Card we send it to backend process as standard
-        const res = await api.post("payments/process", {
-            saleId: sale._id,
-            amount: finalTotal,
-            method: paymentMethod.toUpperCase(),
-            transactionId: paymentMethod !== "cash" ? txnId : undefined,
-        });
-        setTransactionId(txnId);
-        setResult("success");
-
-        // Automatically trigger completion and auto-download after 1.5 seconds minimum friction
-        setTimeout(() => {
-            onPaymentSuccess(sale._id);
-        }, 1500);
-      } catch (error) {
-        alert("Server Error while saving payment: " + (error.response?.data?.message || error.message));
-        setResult("failure");
-      } finally {
-        setProcessing(false);
-      }
+      setResult(isFailure ? "failure" : "success");
+      setProcessing(false);
     }, 3000);
   };
 
-  // Removed manual download invoice function as it is now automated
+  const handleDownloadInvoice = () => {
+    alert("Invoice downloading... (In a real app, this triggers a PDF generator)");
+  };
 
   return (
-    <div className="checkout-wrapper" style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', zIndex: 1000, overflowY: 'auto' }}>
+    <div className="checkout-wrapper">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         
         .checkout-wrapper {
           min-height: 100vh;
-          background: rgba(15, 23, 42, 0.4);
-          backdrop-filter: blur(8px);
+          background: #f3f4f6;
+          background-image: radial-gradient(circle at 100% 0%, #e0e7ff 0%, #f3f4f6 50%, #f3f4f6 100%);
           font-family: 'Inter', system-ui, sans-serif;
-          padding: 40px 20px;
+          padding: 60px 20px;
           color: #1f2937;
           display: flex;
           justify-content: center;
           align-items: flex-start;
-          animation: fadeIn 0.3s ease;
         }
 
         .checkout-container {
@@ -102,10 +84,12 @@ export default function PaymentModal({ sale, cart = [], subtotal = 0, taxAmount 
         }
 
         .card-panel {
-          background: rgba(255, 255, 255, 1);
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(10px);
           border-radius: 20px;
-          box-shadow: 0 25px 50px rgba(0,0,0,0.15), 0 1px 3px rgba(0,0,0,0.02);
+          box-shadow: 0 20px 40px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.02);
           padding: 35px;
+          border: 1px solid rgba(255,255,255,0.4);
           position: relative;
           overflow: hidden;
         }
@@ -113,7 +97,7 @@ export default function PaymentModal({ sale, cart = [], subtotal = 0, taxAmount 
         .summary-panel {
           background: #ffffff;
           border-radius: 20px;
-          box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+          box-shadow: 0 20px 40px rgba(0,0,0,0.04);
           padding: 35px;
         }
 
@@ -148,13 +132,13 @@ export default function PaymentModal({ sale, cart = [], subtotal = 0, taxAmount 
         }
 
         .method-btn.active {
-          border-color: #7b5a2b;
-          background: #fcf9f2;
-          box-shadow: 0 4px 15px rgba(123, 90, 43, 0.15);
+          border-color: #6366f1;
+          background: #eef2ff;
+          box-shadow: 0 4px 15px rgba(99, 102, 241, 0.15);
         }
 
         .method-btn.active .method-title {
-          color: #7b5a2b;
+          color: #4f46e5;
         }
 
         .method-icon {
@@ -227,7 +211,7 @@ export default function PaymentModal({ sale, cart = [], subtotal = 0, taxAmount 
 
         .pay-btn {
           width: 100%;
-          background: #7b5a2b;
+          background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
           color: #fff;
           border: none;
           padding: 18px;
@@ -237,15 +221,14 @@ export default function PaymentModal({ sale, cart = [], subtotal = 0, taxAmount 
           cursor: pointer;
           transition: all 0.2s;
           margin-top: 25px;
-          box-shadow: 0 10px 20px rgba(123, 90, 43, 0.2);
+          box-shadow: 0 10px 20px rgba(79, 70, 229, 0.2);
           position: relative;
           overflow: hidden;
         }
 
         .pay-btn:hover {
           transform: translateY(-2px);
-          box-shadow: 0 15px 25px rgba(123, 90, 43, 0.3);
-          background: #6a4d25;
+          box-shadow: 0 15px 25px rgba(79, 70, 229, 0.3);
         }
 
         .pay-btn:active {
@@ -298,7 +281,7 @@ export default function PaymentModal({ sale, cart = [], subtotal = 0, taxAmount 
           display: flex;
           align-items: center;
           justify-content: center;
-          z-index: 2000;
+          z-index: 1000;
           animation: fadeIn 0.3s ease;
         }
 
@@ -323,8 +306,8 @@ export default function PaymentModal({ sale, cart = [], subtotal = 0, taxAmount 
         .spinner-ring-circle {
           width: 100%;
           height: 100%;
-          border: 4px solid #f3e8d9;
-          border-top-color: #7b5a2b;
+          border: 4px solid #e0e7ff;
+          border-top-color: #4f46e5;
           border-radius: 50%;
           animation: spin 1s linear infinite;
         }
@@ -361,8 +344,8 @@ export default function PaymentModal({ sale, cart = [], subtotal = 0, taxAmount 
 
         .action-btn-outline {
           background: transparent;
-          color: #7b5a2b;
-          border: 2px solid #e2d8cd;
+          color: #4f46e5;
+          border: 2px solid #e0e7ff;
           padding: 16px;
           border-radius: 14px;
           font-weight: 600;
@@ -373,8 +356,8 @@ export default function PaymentModal({ sale, cart = [], subtotal = 0, taxAmount 
         }
 
         .action-btn-outline:hover {
-          background: #fbf6ec;
-          border-color: #d4cbbd;
+          background: #f5f8ff;
+          border-color: #c7d2fe;
         }
 
         /* Animations */
@@ -419,15 +402,20 @@ export default function PaymentModal({ sale, cart = [], subtotal = 0, taxAmount 
             <div className="receipt-panel">
               <div className="summary-row" style={{ marginBottom: 10 }}>
                 <span>Transaction ID</span>
-                <span style={{ fontWeight: 600, color: '#111827' }}>{transactionId || "CASH_COUNTER"}</span>
+                <span style={{ fontWeight: 600, color: '#111827' }}>TXN_8829{Math.floor(Math.random()*10000)}</span>
               </div>
               <div className="summary-row" style={{ marginBottom: 0 }}>
                 <span>Amount Paid</span>
-                <span style={{ fontWeight: 700, color: '#10b981', fontSize: 16 }}>₹{finalTotal.toLocaleString()}</span>
+                <span style={{ fontWeight: 700, color: '#10b981', fontSize: 16 }}>₹{(finalTotal || 4500).toLocaleString()}</span>
               </div>
             </div>
 
-            <p style={{ marginTop: 20, fontSize: 14, color: '#6366f1', fontWeight: 600 }}>Generating your bill...</p>
+            <button onClick={handleDownloadInvoice} className="pay-btn" style={{ marginTop: 0 }}>
+              Download PDF Invoice
+            </button>
+            <button onClick={() => navigate("/sales")} className="action-btn-outline">
+              Start New Sale
+            </button>
           </div>
         </div>
       )}
@@ -460,7 +448,7 @@ export default function PaymentModal({ sale, cart = [], subtotal = 0, taxAmount 
         {/* Left Column - Payment Details */}
         <div className="card-panel">
           <h2 className="title">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#7b5a2b' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#4f46e5' }}>
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
               <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
             </svg>
@@ -477,7 +465,7 @@ export default function PaymentModal({ sale, cart = [], subtotal = 0, taxAmount 
               <div className="method-desc">Paytm, Google Pay, PhonePe, BHIM</div>
             </div>
             {paymentMethod === "upi" && (
-               <div style={{ width: 22, height: 22, background: '#7b5a2b', borderRadius: '50%', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>✓</div>
+               <div style={{ width: 22, height: 22, background: '#4f46e5', borderRadius: '50%', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>✓</div>
             )}
           </div>
 
@@ -491,7 +479,7 @@ export default function PaymentModal({ sale, cart = [], subtotal = 0, taxAmount 
               <div className="method-desc">Visa, Mastercard, RuPay processed locally</div>
             </div>
             {paymentMethod === "card" && (
-               <div style={{ width: 22, height: 22, background: '#7b5a2b', borderRadius: '50%', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>✓</div>
+               <div style={{ width: 22, height: 22, background: '#4f46e5', borderRadius: '50%', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>✓</div>
             )}
           </div>
 
@@ -505,21 +493,7 @@ export default function PaymentModal({ sale, cart = [], subtotal = 0, taxAmount 
               <div className="method-desc">Collect cash manually and mark as paid</div>
             </div>
             {paymentMethod === "cash" && (
-               <div style={{ width: 22, height: 22, background: '#7b5a2b', borderRadius: '50%', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>✓</div>
-            )}
-          </div>
-
-          <div 
-            className={`method-btn ${paymentMethod === "storecredit" ? "active" : ""}`}
-            onClick={() => setPaymentMethod("storecredit")}
-          >
-            <div className="method-icon">🔁</div>
-            <div style={{ textAlign: "left", flex: 1 }}>
-              <div className="method-title">Store Credit</div>
-              <div className="method-desc">Deduct from existing returns or balance</div>
-            </div>
-            {paymentMethod === "storecredit" && (
-               <div style={{ width: 22, height: 22, background: '#7b5a2b', borderRadius: '50%', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>✓</div>
+               <div style={{ width: 22, height: 22, background: '#4f46e5', borderRadius: '50%', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>✓</div>
             )}
           </div>
 
@@ -545,6 +519,7 @@ export default function PaymentModal({ sale, cart = [], subtotal = 0, taxAmount 
                     className="input-field"
                     value={cardNumber}
                     onChange={e => {
+                      // auto-format with spaces
                       let val = e.target.value.replace(/\D/g, '');
                       val = val.replace(/(.{4})/g, '$1 ').trim();
                       setCardNumber(val);
@@ -594,14 +569,9 @@ export default function PaymentModal({ sale, cart = [], subtotal = 0, taxAmount 
             </div>
           )}
           
-          <div style={{ display: 'flex', gap: '15px' }}>
-            <button onClick={onClose} className="action-btn-outline" style={{ marginTop: '25px', flex: 0.4 }}>
-              Cancel
-            </button>
-            <button onClick={handlePayment} className="pay-btn" style={{ flex: 1 }}>
-              Pay ₹{finalTotal.toLocaleString()}
-            </button>
-          </div>
+          <button onClick={handlePayment} className="pay-btn">
+            Pay ₹{(finalTotal || 4500).toLocaleString()}
+          </button>
           
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6, marginTop: 24, fontSize: 13, color: '#9ca3af' }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -635,9 +605,29 @@ export default function PaymentModal({ sale, cart = [], subtotal = 0, taxAmount 
                 </div>
               ))
             ) : (
-              <div style={{ color: '#9ca3af', fontStyle: 'italic', textAlign: 'center', padding: '20px 0' }}>
-                Loading items...
-              </div>
+              // Dummy items just for showcase if visited directly without state
+              <>
+                <div className="summary-row" style={{ alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ width: 40, height: 40, background: '#f3f4f6', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>👕</div>
+                    <div>
+                      <div className="summary-item-name">Premium Cotton Shirt</div>
+                      <div style={{ fontSize: 13, color: '#9ca3af' }}>Qty: 2</div>
+                    </div>
+                  </div>
+                  <div style={{ fontWeight: 600, color: '#374151' }}>₹2,400</div>
+                </div>
+                <div className="summary-row" style={{ alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ width: 40, height: 40, background: '#f3f4f6', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>👖</div>
+                    <div>
+                      <div className="summary-item-name">Slim Fit Denim</div>
+                      <div style={{ fontSize: 13, color: '#9ca3af' }}>Qty: 1</div>
+                    </div>
+                  </div>
+                  <div style={{ fontWeight: 600, color: '#374151' }}>₹1,850</div>
+                </div>
+              </>
             )}
           </div>
           
@@ -645,38 +635,30 @@ export default function PaymentModal({ sale, cart = [], subtotal = 0, taxAmount 
           
           <div className="summary-row">
             <span>Subtotal</span>
-            <span style={{ fontWeight: 500 }}>₹{subtotal.toLocaleString()}</span>
+            <span style={{ fontWeight: 500 }}>₹{(total || 4250).toLocaleString()}</span>
           </div>
-
-          {sale.discountDetails?.amount > 0 && (
-            <div className="summary-row" style={{ color: '#10b981' }}>
-              <span>Discount ({sale.discountDetails.type})</span>
-              <span style={{ fontWeight: 500 }}>-₹{sale.discountDetails.amount.toLocaleString()}</span>
-            </div>
-          )}
-
           <div className="summary-row">
             <span>GST (Included)</span>
-            <span style={{ fontWeight: 500 }}>₹{taxAmount.toLocaleString()}</span>
+            <span style={{ fontWeight: 500 }}>₹{(gst || 250).toLocaleString()}</span>
           </div>
           
           <div className="divider" style={{ borderTop: '2px dashed #e5e7eb', background: 'transparent' }}></div>
           
           <div className="total-row">
             <span>Total to Pay</span>
-            <span style={{ fontSize: 24, color: '#7b5a2b' }}>₹{finalTotal.toLocaleString()}</span>
+            <span style={{ fontSize: 24, color: '#4f46e5' }}>₹{(finalTotal || 4500).toLocaleString()}</span>
           </div>
 
-          {customer && (
+          {(customer || true) && (
             <div className="customer-card">
               <div style={{ fontSize: 12, color: '#64748b', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, marginBottom: 8 }}>Billed To</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ width: 36, height: 36, background: '#f6eedf', color: '#7b5a2b', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', border: '1px solid #d4cbbd' }}>
-                  {customer.name.charAt(0).toUpperCase()}
+                <div style={{ width: 36, height: 36, background: '#e0e7ff', color: '#4f46e5', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+                  {customer ? customer.name.charAt(0) : 'J'}
                 </div>
                 <div>
-                  <div style={{ fontWeight: 600, color: '#1e293b', fontSize: 15 }}>{customer.name}</div>
-                  <div style={{ fontSize: 13, color: '#64748b' }}>{customer.phone}</div>
+                  <div style={{ fontWeight: 600, color: '#1e293b', fontSize: 15 }}>{customer ? customer.name : 'Jane Smith'}</div>
+                  <div style={{ fontSize: 13, color: '#64748b' }}>{customer ? customer.phone : '+91 98765 43210'}</div>
                 </div>
               </div>
             </div>
@@ -686,3 +668,4 @@ export default function PaymentModal({ sale, cart = [], subtotal = 0, taxAmount 
     </div>
   );
 }
+

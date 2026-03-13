@@ -8,8 +8,8 @@ export default function AdminHome() {
 
   useEffect(() => {
     Promise.all([
-      api.get("/sales/dashboard"),
-      api.get("/clothes/alerts/low-stock?threshold=5"),
+      api.get("sales/dashboard"),
+      api.get("clothes/alerts/low-stock?threshold=5"),
     ])
       .then(([s, l]) => {
         setSummary(s.data || { totalSales: 0, totalRevenue: 0 });

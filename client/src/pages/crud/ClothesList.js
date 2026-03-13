@@ -13,12 +13,12 @@ export default function ClothesList() {
   }, []);
 
   const fetchClothes = async () => {
-    const res = await api.get("/clothes");
+    const res = await api.get("clothes");
     setClothes(res.data);
   };
 
   const handleDelete = async (id) => {
-    await api.delete(`/clothes/${id}`);
+    await api.delete(`clothes/${id}`);
     fetchClothes();
   };
 

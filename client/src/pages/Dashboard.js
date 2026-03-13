@@ -1,9 +1,11 @@
 import { Link, useNavigate, Outlet, useLocation } from "react-router-dom";
 import BackButton from "../components/BackButton";
+import { useTheme } from "../context/ThemeContext";
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { theme, toggleTheme } = useTheme();
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -12,11 +14,11 @@ export default function Dashboard() {
   };
 
   const colors = {
-    background: "#f5f5f5",
-    sidebar: "#5C4033",
-    text: "#333",
-    cardBg: "#fff",
-    accent: "#A67C52",
+    background: "var(--color-bg)",
+    sidebar: "var(--color-sidebar)",
+    text: "var(--color-text)",
+    cardBg: "var(--color-card)",
+    accent: "var(--color-accent)",
     sidebarText: "#fff"
   };
 
@@ -115,6 +117,22 @@ export default function Dashboard() {
 
         <button onClick={handleLogout} style={styles.logoutBtn}>
           Logout
+        </button>
+
+        <button 
+          onClick={toggleTheme}
+          style={{ 
+            marginTop: "10px", 
+            padding: "10px", 
+            borderRadius: "8px", 
+            border: "none", 
+            cursor: "pointer",
+            background: theme === 'light' ? '#333' : '#eee',
+            color: theme === 'light' ? '#fff' : '#000',
+            fontWeight: 'bold'
+          }}
+        >
+          {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
         </button>
       </aside>
 

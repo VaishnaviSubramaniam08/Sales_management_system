@@ -10,46 +10,13 @@ export default function Sales() {
 
   useEffect(() => {
     fetchClothes();
-
-    // Global barcode scanner listener
-    let barcodeBuffer = "";
-    let lastKeyTime = Date.now();
-
-    const handleGlobalKeyDown = (e) => {
-      // Ignore if user is typing in an input or textarea
-      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") {
-        return;
-      }
-
-      const currentTime = Date.now();
-      
-      // If time between keys is > 50ms, it's likely manual typing, so reset buffer
-      if (currentTime - lastKeyTime > 50) {
-        barcodeBuffer = "";
-      }
-
-      if (e.key === "Enter") {
-        if (barcodeBuffer.length > 3) {
-          handleBarcodeScan(barcodeBuffer);
-          barcodeBuffer = "";
-        }
-      } else if (e.key.length === 1) {
-        barcodeBuffer += e.key;
-      }
-
-      lastKeyTime = currentTime;
-    };
-
-    window.addEventListener("keydown", handleGlobalKeyDown);
-    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
-  }, [clothes]); // Re-bind if clothes change so handleBarcodeScan has fresh data if needed, 
-                 // though handleBarcodeScan uses api.get, it's safer to include deps if it uses state.
+  }, []); 
 
   const fetchClothes = async () => {
-    const res = await api.get("/clothes");
+    const res = await api.get("clothes");
     setClothes(res.data);
     try {
-      const settings = await api.get("/settings/gst_rate");
+      const settings = await api.get("settings/gst_rate");
       setGstRate(settings.data.value);
     } catch (e) {
       setGstRate(0);
@@ -63,16 +30,17 @@ export default function Sales() {
   const [gstRate, setGstRate] = useState(0);
   const [newCustomerName, setNewCustomerName] = useState("");
   const [showCreateCustomer, setShowCreateCustomer] = useState(false);
+  const [redeemPoints, setRedeemPoints] = useState(false);
 
   const checkLoyalty = async () => {
     try {
-      const res = await api.get(`/customers/search?query=${customerPhone}`);
+      const res = await api.get(`customers/search?query=${customerPhone}`);
       if (res.data.length > 0) {
         const selected = res.data[0];
         setCustomer(selected);
         // Fetch loyalty eligibility details
         try {
-          const loy = await api.get(`/customers/loyalty/${selected._id}`);
+          const loy = await api.get(`customers/loyalty/${selected._id}`);
           setLoyalty(loy.data);
           setSuccess(`Customer Found: ${selected.name}. (Spent: ₹${loy.data.totalSpent}, Visits: ${loy.data.visitCount}, Eligible: ${loy.data.discountPercent}% )`);
         } catch (e) {
@@ -97,14 +65,14 @@ export default function Sales() {
         setError("Enter customer name and phone");
         return;
       }
-      const res = await api.post('/customers/add', { name: newCustomerName.trim(), phone: customerPhone.trim() });
+      const res = await api.post('customers/add', { name: newCustomerName.trim(), phone: customerPhone.trim() });
       const created = res.data;
       setCustomer(created);
       setShowCreateCustomer(false);
       setNewCustomerName("");
       // Fetch loyalty baseline
       try {
-        const loy = await api.get(`/customers/loyalty/${created._id}`);
+        const loy = await api.get(`customers/loyalty/${created._id}`);
         setLoyalty(loy.data);
       } catch {
         setLoyalty(null);
@@ -168,20 +136,6 @@ export default function Sales() {
 
 
 
-  const handleBarcodeScan = async (code) => {
-    try {
-      const res = await api.get(`/clothes/barcode/${code}`);
-      const cloth = res.data;
-      if (cloth) {
-        addToCart(cloth._id, 1);
-        setSuccess(`Added ${cloth.name} to cart`);
-        return true; // Return success to clear input
-      }
-    } catch (err) {
-      setError("Product not found by barcode");
-    }
-    return false;
-  };
 
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [currentSale, setCurrentSale] = useState(null);
@@ -206,13 +160,23 @@ export default function Sales() {
     }
 
     const afterDisc = subtotal - discountDetails.amount;
-    const taxAmount = Math.floor(afterDisc * (gstRate / 100));
+
+    // Points Redemption (1 point = 1 unit of currency)
+    let pointsToRedeem = 0;
+    if (redeemPoints && customer && customer.points > 0) {
+      pointsToRedeem = Math.min(customer.points, afterDisc);
+      // We'll pass this to the backend
+    }
+
+    const finalAfterPoints = afterDisc - pointsToRedeem;
+    const taxAmount = Math.floor(finalAfterPoints * (gstRate / 100));
 
     try {
-      const res = await api.post("/sales/add", {
+      const res = await api.post("sales/add", {
         items: cart,
         customerId: customer ? customer._id : null,
         discountDetails,
+        pointsRedeemed: pointsToRedeem,
         taxDetails: {
           rate: gstRate,
           amount: taxAmount
@@ -225,14 +189,106 @@ export default function Sales() {
     }
   };
 
-  const handlePaymentSuccess = (payment) => {
+  const handlePaymentSuccess = async (saleId) => {
     setShowPaymentModal(false);
-    setSuccess("Sale & Payment completed successfully!");
+    setSuccess("Sale & Payment completed successfully! Downloading bill...");
+    
+    // Auto download bill
+    const targetSaleId = saleId || (currentSale && currentSale._id);
+    if (targetSaleId) {
+      await downloadInvoice(targetSaleId);
+    }
+
+    // Auto-clear success message 
+    setTimeout(() => {
+        setSuccess("");
+    }, 4000);
+
     setCart([]);
-    setCurrentSale(null);
-    setCustomer(null);
-    setCustomerPhone("");
+    setCurrentSale(null); // Clear current sale to reset UI completely
     fetchClothes();
+  };
+
+  const printThermalReceipt = (sale) => {
+    if (!sale) return;
+    const printWindow = window.open('', '_blank', 'width=350,height=600');
+    const itemsHtml = sale.items.map(item => `
+      <tr>
+        <td style="padding: 5px 0;">${item.name || 'Item'} x${item.quantity}</td>
+        <td style="text-align: right;">₹${item.price * item.quantity}</td>
+      </tr>
+    `).join('');
+
+    const subtotal = sale.items.reduce((acc, item) => acc + item.price * item.quantity, 0);
+    const tax = sale.taxDetails?.amount || 0;
+    const discount = sale.discountDetails?.amount || 0;
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Thermal Receipt</title>
+          <style>
+            @media print { body { width: 80mm; margin: 0; padding: 5mm; } }
+            body { font-family: 'Courier New', monospace; width: 80mm; font-size: 12px; }
+            .header { text-align: center; border-bottom: 1px dashed #000; padding-bottom: 10px; margin-bottom: 10px; }
+            table { width: 100%; border-collapse: collapse; }
+            .total { border-top: 1px dashed #000; margin-top: 10px; padding-top: 5px; font-weight: bold; }
+            .footer { text-align: center; margin-top: 20px; font-size: 10px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h2 style="margin: 0;">SELVALAKSHMI</h2>
+            <p style="margin: 5px 0;">Garment Retailer</p>
+            <p style="margin: 0; font-size: 10px;">Date: ${new Date(sale.date || Date.now()).toLocaleString()}</p>
+          </div>
+          <table>
+            ${itemsHtml}
+          </table>
+          <div class="total">
+            <div style="display:flex; justify-content:space-between;"><span>Subtotal:</span> <span>₹${subtotal}</span></div>
+            ${discount > 0 ? `<div style="display:flex; justify-content:space-between;"><span>Discount:</span> <span>-₹${discount}</span></div>` : ''}
+            <div style="display:flex; justify-content:space-between;"><span>Tax:</span> <span>₹${tax}</span></div>
+            <div style="display:flex; justify-content:space-between; font-size: 14px; margin-top: 5px;"><span>GRAND TOTAL:</span> <span>₹${sale.totalAmount}</span></div>
+          </div>
+          <div class="footer">
+            <p>Thank you for shopping!</p>
+            <p>Please visit again.</p>
+          </div>
+          <script>window.onload = function() { window.print(); window.close(); }</script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+  
+  const downloadInvoice = async (saleId) => {
+    try {
+        const response = await api.get(`sales/invoice/${saleId}`, {
+            responseType: "blob",
+        });
+
+        // Extract filename from the server's Content-Disposition header
+        let filename = `sales_${saleId}.pdf`;
+        const disposition = response.headers['content-disposition'];
+        if (disposition && disposition.indexOf('attachment') !== -1) {
+            const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+            const matches = filenameRegex.exec(disposition);
+            if (matches != null && matches[1]) {
+                filename = matches[1].replace(/['"]/g, '');
+            }
+        }
+
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", filename);
+        document.body.appendChild(link);
+        link.click();
+        link.parentNode.removeChild(link);
+    } catch (err) {
+        console.error("Invoice download failed");
+    }
   };
 
   // ====== Inline Styles ======
@@ -307,7 +363,14 @@ export default function Sales() {
       <h2 style={styles.title}>Sales</h2>
 
       {error && <p style={styles.error}>{error}</p>}
-      {success && <p style={styles.success}>{success}</p>}
+      {success && (
+        <div style={{ ...styles.success, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+          <div style={{ padding: '20px', background: '#d4edda', borderRadius: '8px', marginBottom: '20px', width: '100%', border: '1px solid #c3e6cb' }}>
+            <h3 style={{ margin: '0 0 10px 0', color: '#155724' }}>{success}</h3>
+            <p style={{ margin: 0, color: '#155724', fontSize: '14px' }}>Redirecting to New Sale...</p>
+          </div>
+        </div>
+      )}
 
       {/* Customer & Discount Controls */}
       <div style={{ padding: "15px", background: "#f9f9f9", borderRadius: "8px", marginBottom: "20px", border: "1px solid #eee" }}>
@@ -347,11 +410,17 @@ export default function Sales() {
           </div>
         )}
 
-        <div style={{ marginTop: "10px" }}>
+        <div style={{ marginTop: "10px", display: "flex", gap: "20px" }}>
           <label style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <input type="checkbox" checked={isFestive} onChange={e => setIsFestive(e.target.checked)} />
             Apply Festive Season Discount (10%)
           </label>
+          {customer && customer.points > 0 && (
+            <label style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <input type="checkbox" checked={redeemPoints} onChange={e => setRedeemPoints(e.target.checked)} />
+              Redeem Points ({customer.points} available)
+            </label>
+          )}
         </div>
       </div>
 
@@ -359,7 +428,6 @@ export default function Sales() {
       <AddToCartForm
         clothes={clothes}
         addToCart={addToCart}
-        onBarCodeScan={handleBarcodeScan}
         styles={styles}
       />
 
@@ -412,6 +480,15 @@ export default function Sales() {
       {showPaymentModal && currentSale && (
         <PaymentModal
           sale={currentSale}
+          cart={cart}
+          subtotal={total}
+          taxAmount={(() => {
+            const subtotal = total;
+            const pct = isFestive ? 10 : (loyalty?.discountPercent || 0);
+            const disc = Math.floor(subtotal * (pct / 100));
+            return Math.floor((subtotal - disc) * (gstRate / 100));
+          })()}
+          customer={customer}
           onClose={() => setShowPaymentModal(false)}
           onPaymentSuccess={handlePaymentSuccess}
         />
@@ -420,10 +497,9 @@ export default function Sales() {
   );
 }
 
-function AddToCartForm({ clothes, addToCart, onBarCodeScan, styles }) {
+function AddToCartForm({ clothes, addToCart, styles }) {
   const [clothId, setClothId] = useState("");
   const [qty, setQty] = useState(1);
-  const [barcode, setBarcode] = useState("");
   const [filterText, setFilterText] = useState("");
   const [isListening, setIsListening] = useState(false);
 
@@ -444,12 +520,6 @@ function AddToCartForm({ clothes, addToCart, onBarCodeScan, styles }) {
     recognition.start();
   };
 
-  const handleScan = async (e) => {
-    if (e.key === "Enter") {
-      const success = await onBarCodeScan(barcode);
-      if (success) setBarcode("");
-    }
-  };
 
   const visibleClothes = clothes.filter(c => c.name.toLowerCase().includes(filterText.toLowerCase()));
 
@@ -458,13 +528,6 @@ function AddToCartForm({ clothes, addToCart, onBarCodeScan, styles }) {
   return (
     <div style={styles.row}>
       <div style={{ width: "60%" }}>
-        <input
-          placeholder="Scan Barcode (Press Enter)"
-          value={barcode}
-          onChange={(e) => setBarcode(e.target.value)}
-          onKeyDown={handleScan}
-          style={{ ...styles.input, width: "100%", marginBottom: "10px" }}
-        />
         <div style={{ display: "flex", gap: "5px", marginBottom: "10px" }}>
           <input
             placeholder="Search by name... (or Voice)"

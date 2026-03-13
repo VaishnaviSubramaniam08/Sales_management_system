@@ -1,14 +1,13 @@
 import { useEffect, useState } from "react";
 import api from "../api/axios";
 import { Link } from "react-router-dom";
-import BarcodeGenerator from "../components/BarcodeGenerator";
 
 export default function InventoryContent() {
   const [clothes, setClothes] = useState([]);
   const [isListening, setIsListening] = useState(false);
 
   useEffect(() => {
-    api.get("/clothes").then(res => setClothes(res.data));
+    api.get("clothes").then(res => setClothes(res.data));
   }, []);
 
   const startVoiceSearch = () => {
@@ -44,7 +43,7 @@ export default function InventoryContent() {
       query = query.replace(priceMatch[0], "").trim();
     }
 
-    api.get(`/clothes?search=${query}&maxPrice=${maxPrice}`).then(res => setClothes(res.data));
+    api.get(`clothes?search=${query}&maxPrice=${maxPrice}`).then(res => setClothes(res.data));
   };
 
   const styles = {
@@ -88,7 +87,7 @@ export default function InventoryContent() {
         <div style={{ display: "flex", alignItems: "center" }}>
           <input
             placeholder="Search clothes..."
-            onChange={(e) => api.get(`/clothes?search=${e.target.value}`).then(res => setClothes(res.data))}
+            onChange={(e) => api.get(`clothes?search=${e.target.value}`).then(res => setClothes(res.data))}
             style={{ padding: "8px", borderRadius: "5px", border: "1px solid #ccc", width: "250px" }}
           />
           <button onClick={startVoiceSearch} style={{
@@ -145,42 +144,9 @@ export default function InventoryContent() {
               {c.category} <span style={{ margin: "0 5px" }}>•</span> ₹{c.price}
             </div>
             <div style={{ fontSize: "12px", color: "#888", marginTop: "5px", textAlign: "center" }}>
-              {c.quantity} items left {c.barcode && <span style={{display: 'block'}}>Barcode: {c.barcode}</span>}
+              {c.quantity} items left
             </div>
 
-            {c.barcode && (
-              <div style={{ marginTop: '10px' }}>
-                <BarcodeGenerator value={c.barcode} width={1.5} height={40} fontSize={12} />
-                <button 
-                  onClick={() => {
-                    const printWindow = window.open('', '_blank');
-                    printWindow.document.write('<html><head><title>Print Barcode</title></head><body>');
-                    printWindow.document.write('<div style="text-align:center; padding: 20px;">');
-                    printWindow.document.write(`<h3>${c.name}</h3>`);
-                    const barcodeSvg = document.getElementById(`barcode-${c.barcode}`);
-                    if (barcodeSvg) {
-                      printWindow.document.write(barcodeSvg.outerHTML);
-                    } else {
-                      printWindow.document.write('Barcode not found');
-                    }
-                    printWindow.document.write('</div>');
-                    printWindow.document.write('</body></html>');
-                    printWindow.document.close();
-                    printWindow.print();
-                  }}
-                  style={{ 
-                    fontSize: '10px', 
-                    padding: '4px 8px', 
-                    background: '#eee', 
-                    border: '1px solid #ccc', 
-                    borderRadius: '4px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Print Barcode
-                </button>
-              </div>
-            )}
 
             {localStorage.getItem("role") === "admin" && (
               <div style={{ marginTop: "15px", display: "flex", justifyContent: "center", gap: "10px" }}>
@@ -190,7 +156,7 @@ export default function InventoryContent() {
                 <button
                   onClick={async () => {
                     if (window.confirm("Are you sure?")) {
-                      await api.delete(`/clothes/${c._id}`);
+                      await api.delete(`clothes/${c._id}`);
                       setClothes(clothes.filter(x => x._id !== c._id));
                     }
                   }}
