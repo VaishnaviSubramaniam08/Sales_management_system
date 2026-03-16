@@ -119,7 +119,7 @@ export default function InventoryContent() {
             }}>
               {c.image ? (
                 <img
-                  src={`http://localhost:5000${c.image}`}
+                  src={c.image.startsWith('http') ? c.image : `http://localhost:5000${c.image}`}
                   alt={c.name}
                   style={{
                     width: "100%",

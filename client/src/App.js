@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { HashRouter as Router, Routes, Route } from "react-router-dom";
 import Home from "./pages/frontpage/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -31,7 +31,7 @@ import PrivateRoute from "./PrivateRoute";
 
 function App() {
   return (
-    <BrowserRouter>
+    <Router>
       <Routes>
 
         {/* Public */}
@@ -184,7 +184,7 @@ function App() {
         />
 
       </Routes>
-    </BrowserRouter>
+    </Router>
   );
 }
 

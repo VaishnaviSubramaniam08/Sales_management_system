@@ -17,8 +17,9 @@ export default function AddClothes() {
     costPrice: "",
     quantity: "",
     supplier: "",
-    image: "",
+    image: null, // will be file object or URL
   });
+  const [imageUrl, setImageUrl] = useState("");
 
   useEffect(() => {
     const fetchSuppliers = async () => {
@@ -44,7 +45,7 @@ export default function AddClothes() {
     if (!form.costPrice || Number(form.costPrice) <= 0) newErrors.costPrice = "Cost Price must be > 0";
     if (!form.quantity || Number(form.quantity) <= 0) newErrors.quantity = "Quantity must be > 0";
     if (!form.supplier) newErrors.supplier = "Supplier is required";
-    if (!form.image) newErrors.image = "Image URL is required";
+    if (!form.image && !imageUrl) newErrors.image = "Image is required";
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -58,18 +59,43 @@ export default function AddClothes() {
     }
   };
 
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setForm({ ...form, image: file });
+      setImageUrl(""); // Clear URL if file is selected
+    }
+  };
+
 
   const handleSubmit = async () => {
     if (!validate()) return;
 
     try {
-      await api.post("clothes/add", form);
+      const formData = new FormData();
+      Object.keys(form).forEach(key => {
+        if (key === 'image' && form[key]) {
+          formData.append('image', form[key]);
+        } else if (key !== 'image') {
+          formData.append(key, form[key]);
+        }
+      });
+      
+      if (imageUrl && !form.image) {
+        formData.append('image', imageUrl);
+      }
+
+      await api.post("clothes/add", formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+
       setSuccess("Cloth Added Successfully!");
       setForm({
         name: "", category: "", size: "", color: "",
         price: "", costPrice: "", quantity: "",
-        supplier: "", image: "",
+        supplier: "", image: null,
       });
+      setImageUrl("");
       setTimeout(() => {
         setSuccess("");
         navigate("/admin/inventory");
@@ -206,12 +232,37 @@ export default function AddClothes() {
         </div>
 
         <div style={styles.fieldGroup}>
-          <label style={styles.label}>Image URL</label>
-          <input name="image" value={form.image} onChange={handleInputChange} placeholder="Image URL" style={styles.input} />
+          <label style={styles.label}>Image (File Upload or URL)</label>
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+            <input 
+              type="file" 
+              accept="image/*" 
+              onChange={handleFileChange} 
+              style={{ ...styles.input, marginBottom: 0, flex: 1 }} 
+            />
+          </div>
+          <div style={{ position: 'relative' }}>
+            <div style={{ textAlign: 'center', margin: '5px 0', fontSize: '12px', color: '#888' }}>- OR -</div>
+            <input 
+              name="image" 
+              value={imageUrl} 
+              onChange={(e) => {
+                setImageUrl(e.target.value);
+                setForm({ ...form, image: null }); // Clear file if URL is entered
+              }} 
+              placeholder="Image URL" 
+              style={{ ...styles.input, marginBottom: 0 }} 
+            />
+          </div>
           {errors.image && <span style={styles.error}>{errors.image}</span>}
-          {form.image && (
+          {(form.image || imageUrl) && (
             <div style={{ marginTop: '10px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #d4cbbd' }}>
-              <img src={form.image} alt="Preview" style={{ width: '100%', display: 'block' }} onError={(e) => e.target.style.display='none'} />
+              <img 
+                src={form.image ? URL.createObjectURL(form.image) : imageUrl} 
+                alt="Preview" 
+                style={{ width: '100%', display: 'block' }} 
+                onError={(e) => e.target.style.display='none'} 
+              />
             </div>
           )}
         </div>
